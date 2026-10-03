@@ -237,6 +237,23 @@ form.add select,form.add textarea{font:inherit;font-size:13px;border:1px solid v
 form.add textarea{min-height:72px;resize:vertical}
 .check{font-size:12.5px;border-radius:var(--r);padding:8px 10px;background:var(--surface-2)}
 .check.bad{background:var(--opp-soft);color:var(--ink)}
+.cmts{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.cmts h3{margin:0;font-size:14px;display:flex;align-items:baseline;gap:8px}
+.cmts h3 .mono{font-size:12px;color:var(--muted);font-weight:400}
+.cmt-list{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto}
+.cmt{border-left:2px solid var(--line);padding-left:10px;font-size:13px}
+.cmt.me{border-left-color:var(--accent)}
+.cmt .hd{display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:var(--muted)}
+.cmt .hd b{font-weight:600}
+.cmt .hd .sp{flex:1}
+.cmt .del{border:0;background:none;color:var(--faint);font-size:11.5px;padding:0;text-decoration:underline}
+.cmt .del:hover{color:var(--opp)}
+.cmt p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+form.cmt-form{display:flex;flex-direction:column;gap:8px}
+form.cmt-form input,form.cmt-form textarea{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+form.cmt-form textarea{min-height:64px;resize:vertical}
+form.cmt-form .row{display:flex;gap:8px;align-items:center}
+form.cmt-form .row input{flex:1;min-width:0}
 
 /* my */
 .my-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
@@ -284,7 +301,6 @@ form.add textarea{min-height:72px;resize:vertical}
     </div>
     <nav class="tabs" role="tablist" aria-label="画面">
       <button role="tab" data-view="book" aria-selected="true">本から</button>
-      <button role="tab" data-view="questions" aria-selected="false">問いから</button>
       <button role="tab" data-view="space" aria-selected="false">知の空間</button>
       <button role="tab" data-view="eval" aria-selected="false">関係を評価する<span class="cnt" id="qcnt"></span></button>
       <button role="tab" data-view="mine" aria-selected="false">わたしの空間<span class="cnt" id="mcnt"></span></button>
@@ -297,6 +313,17 @@ form.add textarea{min-height:72px;resize:vertical}
       <div class="book-grid">
         <div style="display:flex;flex-direction:column;gap:14px">
           <article class="panel bookcard" id="bookcard"></article>
+          <section class="panel cmts" aria-labelledby="cmtTitle">
+            <h3 id="cmtTitle">この本へのコメント<span class="mono" id="cmtCnt"></span></h3>
+            <div class="cmt-list" id="cmtList"></div>
+            <form class="cmt-form" id="cmtForm">
+              <textarea id="cmtText" placeholder="読んだ感想、どの章が役立ったか、ほかの本とのつながりなど" aria-label="コメント" maxlength="1000"></textarea>
+              <div class="row">
+                <input id="cmtWho" type="text" placeholder="所属・学年（任意）" aria-label="所属・学年（任意）" maxlength="40">
+                <button class="btn primary small" type="submit">投稿</button>
+              </div>
+            </form>
+          </section>
           <div class="issue"><b>論点 ― 既存システムとの違い</b>OPACやCiNiiは書誌情報の一致で探し、LibraryThingはタグや利用者の蔵書の重なりから推薦する。ここでは「批判」「異なる答え」といった<strong>関係の種類</strong>が探索の軸になる。この差が本当に新しい出会いを生むかが検証点。</div>
         </div>
         <div class="panel ego-wrap">
@@ -428,7 +455,7 @@ form.add textarea{min-height:72px;resize:vertical}
       </div>
     </section>
 
-    <p class="foot">書誌は実在の本ですが、関係・根拠文・評価数・軌跡・配架場所はすべてプロトタイプ用の例です。根拠文は内容の要約であり、原文からの引用ではありません。操作の記録はこのページを開いている間だけ保持されます。</p>
+    <p class="foot">書誌は実在の本ですが、関係・根拠文・評価数・軌跡・配架場所はすべてプロトタイプ用の例です。根拠文は内容の要約であり、原文からの引用ではありません。操作の記録はこのページを開いている間だけ保持されます。コメントはこのブラウザ内にのみ保存され、ほかの人には表示されません。</p>
   </main>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -558,6 +585,17 @@ const DISC={
  s15:[{who:"人文社会系研究科 D1",t:"若林は三浦を名指しで批判しているわけではないので、「批判」ではなく「異なる答え」のままでよいと思う。"}],
 };
 
+const COMMENTS_SEED={
+ jacobs:[{who:"工学系研究科 D1",t:"第7章「多様性の発生装置」だけでも読む価値がある。用途の混在・短い街区・古い建物・密度の4条件は、今の再開発の議論でもそのまま使える。",when:"3日前"},
+         {who:"公共政策大学院 M1",t:"観察の対象がニューヨークのグリニッジ・ヴィレッジに偏っている点は注意して読みたい。",when:"先週"}],
+ calvino:[{who:"文学部 B3",t:"どこから読んでもいい。都市論の授業の前に数篇ずつ読むと、抽象的な議論の手がかりになる。",when:"昨日"}],
+ putnam:[{who:"人文社会系研究科 M2",t:"日本語訳は大部なので、まず序章と第1部の結論だけ読むのがおすすめ。",when:"5日前"}],
+};
+const CMT_KEY="kankei-shoka:comments";
+function loadMyComments(){try{return JSON.parse(localStorage.getItem(CMT_KEY))||{}}catch(e){return {}}}
+function saveMyComments(m){try{localStorage.setItem(CMT_KEY,JSON.stringify(m));return true}catch(e){return false}}
+let MY_COMMENTS=loadMyComments();
+
 const TRAILS=[
  {who:"工学系研究科 D1",when:"2時間前",path:["west","jacobs","glaeser","harvey","lefebvre"]},
  {who:"文学部 B3",when:"今朝",path:["calvino","maeda","yoshimi","jinnai","maki"]},
@@ -681,6 +719,7 @@ function renderBook(){
   $("#filters").querySelectorAll("[data-f]").forEach(el=>el.onclick=()=>{const f=el.dataset.f;S.fams.has(f)?S.fams.delete(f):S.fams.add(f);renderBook()});
   $("#crossBtn").onclick=()=>{S.cross=!S.cross;renderBook()};
 
+  renderComments();
   drawEgo();
   renderRels();
   // trails
@@ -785,6 +824,31 @@ function bindVotes(root,rerender){
     rerender();
   });
 }
+
+/* ---------- COMMENTS ---------- */
+function fmtDate(ts){const d=new Date(ts);return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`}
+function renderComments(){
+  const id=S.center,seed=COMMENTS_SEED[id]||[],mine=MY_COMMENTS[id]||[];
+  const all=[...mine.slice().reverse().map(c=>({...c,me:true})),...seed];
+  $("#cmtCnt").textContent=all.length?`${all.length}件`:"";
+  $("#cmtList").innerHTML=all.length?all.map(c=>`<div class="cmt${c.me?" me":""}"><div class="hd"><b>${esc(c.who||"あなた")}</b><span>${c.me?fmtDate(c.ts):esc(c.when)}</span><span class="sp"></span>${c.me?`<button class="del" data-del="${c.ts}">削除</button>`:""}</div><p>${esc(c.t)}</p></div>`).join("")
+    :`<p style="margin:0;color:var(--muted);font-size:13px">まだコメントはありません。最初のコメントを残せます。</p>`;
+  $("#cmtList").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    MY_COMMENTS[id]=(MY_COMMENTS[id]||[]).filter(c=>String(c.ts)!==b.dataset.del);
+    if(!MY_COMMENTS[id].length)delete MY_COMMENTS[id];
+    saveMyComments(MY_COMMENTS);renderComments();toast("コメントを削除しました。");
+  });
+}
+$("#cmtForm").addEventListener("submit",ev=>{
+  ev.preventDefault();
+  const t=$("#cmtText").value.trim(),who=$("#cmtWho").value.trim();
+  if(!t){$("#cmtText").focus();return}
+  const id=S.center;
+  (MY_COMMENTS[id]=MY_COMMENTS[id]||[]).push({who:who||"あなた",t,ts:Date.now()});
+  const ok=saveMyComments(MY_COMMENTS);
+  $("#cmtText").value="";renderComments();
+  toast(ok?"コメントを投稿しました。":"コメントを投稿しました（このブラウザでは保存できないため、閉じると消えます）。");
+});
 
 /* ---------- QUESTIONS ---------- */
 function renderQuestions(){
