@@ -14,7 +14,7 @@
   --accent:#2B6C70; --accent-ink:#FFFFFF; --accent-soft:#DCEBEA;
   --opp:#B3472D; --inh:#3561A6; --par:#56853A; --com:#9C761C;
   --opp-soft:#F6E3DC; --inh-soft:#E0E8F5; --par-soft:#E3EEDB; --com-soft:#F3EAD3;
-  --issue:#7A4FA0; --issue-soft:#EFE7F6;
+  --cls-lab-op:.1; --issue:#7A4FA0; --issue-soft:#EFE7F6;
   --f-disp:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-ui:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -23,7 +23,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
+    --cls-lab-op:.2; --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
     --accent:#6DB5B8; --accent-ink:#0E1415; --accent-soft:#1F3435;
     --opp:#E4826A; --inh:#82A7E6; --par:#94C274; --com:#D8B45E;
     --opp-soft:#3A2521; --inh-soft:#1F2A3E; --par-soft:#243423; --com-soft:#3A3120;
@@ -32,7 +32,7 @@
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
+  --cls-lab-op:.2; --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
   --accent:#6DB5B8; --accent-ink:#0E1415; --accent-soft:#1F3435;
   --opp:#E4826A; --inh:#82A7E6; --par:#94C274; --com:#D8B45E;
   --opp-soft:#3A2521; --inh-soft:#1F2A3E; --par-soft:#243423; --com-soft:#3A3120;
@@ -178,7 +178,7 @@ svg text{font-family:var(--f-ui)}
 .seg button{border:0;background:var(--surface);padding:5px 12px;font-size:12.5px}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 #global{width:100%;height:auto;display:block;min-width:640px;cursor:grab}
-.cls-lab{fill:var(--ink);opacity:.07;font-family:var(--f-disp);font-weight:700;font-size:34px}
+.cls-lab{fill:var(--ink);opacity:var(--cls-lab-op);pointer-events:none;font-family:var(--f-disp);font-weight:700;font-size:34px}
 .g-link{stroke-opacity:.55;stroke-width:1.3}
 .g-link.faint{stroke-opacity:.12}
 .g-link.lit{stroke-opacity:1;stroke:var(--accent)!important}
