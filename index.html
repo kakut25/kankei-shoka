@@ -231,6 +231,14 @@ svg text{font-family:var(--f-ui)}
 .tip .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
 .tip .meta{color:var(--muted);font-size:11.5px;margin-top:6px;font-family:var(--f-mono)}
 .tip .hint{color:var(--faint);font-size:11px;margin-top:4px}
+.s-node.faint{opacity:.22}
+.s-node.lit{opacity:1}
+.s-node.lit circle{fill:var(--accent);stroke:var(--accent)}
+.s-node.extra circle{stroke-dasharray:3 2}
+.s-link.faint{stroke-opacity:.08}
+.s-link.lit{stroke:var(--accent)!important;stroke-opacity:1;stroke-width:3.5}
+.s-link.jump{stroke:var(--faint);stroke-dasharray:5 4}
+.stepno{fill:var(--accent);font-family:var(--f-mono);font-size:11px;font-weight:600;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
 line.hit{stroke:transparent;stroke-width:12;cursor:pointer}
 [data-tip-edge] .e-lab,.e-lab[data-tip-edge]{cursor:pointer}
 .walker{fill:var(--accent)}
@@ -449,6 +457,11 @@ form.cmt-form .row input{flex:1;min-width:0}
             <p style="margin:0;font-size:12px;color:var(--muted)">深さは、当てはまった本から関係を何本辿るか。表示は30冊までです。</p>
           </div>
           <div class="panel" style="padding:12px 16px"><ol class="sres" id="sres"></ol></div>
+          <div class="panel" style="padding:14px 16px">
+            <h3 style="margin:0 0 4px">この結果を通る軌跡</h3>
+            <p style="margin:0 0 10px;font-size:12.5px;color:var(--muted)">表示中の本を通った道筋を、このグラフの上でなぞります。</p>
+            <div class="tlist" id="sTrails"></div>
+          </div>
         </div>
         <div class="panel ego-wrap">
           <div class="filters" id="sfilters"></div>
@@ -761,7 +774,7 @@ const S={view:"book",center:START,fams:new Set(FAM_ORDER),cross:false,
   read:new Set(SAVED?.read||["jacobs","lynch","oldenburg"]),mine:new Set(SAVED?.mine||["e7","s11","s20","e13"]),seed:new Set(["e7","s11","s20","e13"]),
   myVote:SAVED?.myVote||{},fixes:SAVED?.fixes||{},log:SAVED?.log||[],hist:SAVED?.hist||["jacobs"],
   mode:"type",replay:null,fixOpen:false,evA:"",evB:"",evDraft:null,
-  egoDepth:"auto",sq:"",sTop:5,sDepth:1,prevView:"book"};
+  egoDepth:"auto",sq:"",sTop:5,sDepth:1,prevView:"book",sReplay:null};
 // 自分で追加した関係を復元し、自分の評価を数に反映する
 const addedEdge=r=>({...r,type:r.types[0],q:null,by:"あなた",agree:0,dis:0,trav:0});
 const ADDED=SAVED?.added||[];
@@ -829,7 +842,7 @@ function searchBooks(v){
 }
 function openSearch(v){
   if(S.view!=="search")S.prevView=S.view;
-  S.sq=v.trim();show("search");
+  S.sq=v.trim();S.sReplay=null;show("search");
 }
 (function(){
   const q=$("#q"),box=$("#sugg");let idx=0,res=[];
@@ -924,14 +937,35 @@ function renderSearch(){
   const {dist,hidden}=neighborhood(top.map(x=>x.b.id),S.sDepth,SEARCH_CAP,famOK);
   const cap=$("#sCap");cap.hidden=!hidden;
   cap.textContent=hidden?`表示の上限${SEARCH_CAP}冊に達したため、ほかに辿れる${hidden}冊以上を省略しました。深さを下げるか、上位の件数を減らしてください。`:"";
-  drawSearchGraph(dist);
+  // 表示中の本を通る軌跡（自分の軌跡＋ほかの人の軌跡）。通る冊数の多い順
+  const tl=[...(S.trail.length>1?[{key:"me",t:{who:"あなた",when:"これまで",path:S.trail}}]:[]),...TRAILS.map((t,i)=>({key:"t"+i,t}))]
+    .map(x=>({...x,n:new Set(x.t.path.filter(id=>dist.has(id))).size})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
+  if(!tl.some(x=>x.key===S.sReplay))S.sReplay=null;
+  const short=id=>esc(B[id].title.length>7?B[id].title.slice(0,7)+"…":B[id].title);
+  $("#sTrails").innerHTML=tl.length?tl.map(x=>`<button class="tbtn" data-st="${x.key}" aria-pressed="${S.sReplay===x.key}"><span class="who">${esc(x.t.who)}・${esc(x.t.when)}・表示中の本を${x.n}冊通る</span><span class="path">${x.t.path.map(short).join(" → ")}</span></button>`).join("")
+    +(S.sReplay?`<button class="btn small" id="sStop" type="button">再生をやめる</button>`:"")
+    :`<p style="margin:0;font-size:12.5px;color:var(--muted)">表示中の本を通った軌跡はまだありません。</p>`;
+  $("#sTrails").querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{S.sReplay=b.dataset.st===S.sReplay?null:b.dataset.st;renderSearch()});
+  const stop=$("#sStop");if(stop)stop.onclick=()=>{S.sReplay=null;renderSearch()};
+  drawSearchGraph(dist,tl.find(x=>x.key===S.sReplay)?.t.path);
 }
-function drawSearchGraph(dist){
+let sTimers=[];
+function drawSearchGraph(dist,path){
+  sTimers.forEach(clearTimeout);sTimers=[];
   const svg=d3.select("#sgraph");svg.selectAll("*").remove();
   const W=900,H=600;
   if(!dist.size){svg.append("text").attr("x",W/2).attr("y",H/2).attr("text-anchor","middle").attr("fill","var(--muted)").text("表示する本がありません");return}
+  // 再生中は、軌跡のうち表示外の本と、その道筋の線も加える
   const set=new Set(dist.keys()),nodes=[...set].map(id=>({id,b:B[id],d:dist.get(id)}));
+  if(path)path.forEach(id=>{if(!set.has(id)){set.add(id);nodes.push({id,b:B[id],d:-1})}});
   const links=EDGES.filter(e=>set.has(e.from)&&set.has(e.to)&&famOK(e)).map(e=>({source:e.from,target:e.to,e}));
+  const steps=[];
+  if(path)for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i];if(a===b)continue;
+    let l=links.find(x=>x.e&&((x.e.from===a&&x.e.to===b)||(x.e.from===b&&x.e.to===a)));
+    if(!l){const e=findEdge(a,b);l={source:a,target:b,e:e||null};links.push(l)}
+    steps.push(l);
+  }
   const sim=d3.forceSimulation(nodes).force("link",d3.forceLink(links).id(d=>d.id).distance(95).strength(.4))
     .force("charge",d3.forceManyBody().strength(-340)).force("x",d3.forceX(W/2).strength(.06)).force("y",d3.forceY(H/2).strength(.09))
     .force("collide",d3.forceCollide(36)).stop();
@@ -939,19 +973,34 @@ function drawSearchGraph(dist){
   fitNodes(nodes,W,H,70);
   const root=svg.append("g");
   svg.call(d3.zoom().scaleExtent([.6,3]).on("zoom",ev=>root.attr("transform",ev.transform)));
-  const lk=root.append("g").selectAll("line").data(links).join("line").attr("class",d=>"s-link e-"+fam(d.e))
+  const lk=root.append("g").selectAll("line").data(links).join("line").attr("class",d=>d.e?"s-link e-"+fam(d.e):"s-link jump")
     .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
-  root.append("g").selectAll("line").data(links).join("line").attr("class","hit").attr("data-tip-edge",d=>d.e.id)
+  root.append("g").selectAll("line").data(links.filter(l=>l.e)).join("line").attr("class","hit").attr("data-tip-edge",d=>d.e.id)
     .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y)
-    .on("mouseenter",(ev,d)=>lk.classed("dim",l=>l!==d)).on("mouseleave",()=>lk.classed("dim",false));
+    .on("mouseenter",(ev,d)=>{if(!path)lk.classed("dim",l=>l!==d)}).on("mouseleave",()=>lk.classed("dim",false));
   const op=[1,.95,.72,.55];
-  const nd=root.append("g").selectAll("g").data(nodes).join("g").attr("class",d=>"s-node"+(d.d===0?" hit":"")).attr("data-tip-node",d=>d.id).attr("data-tip-d",d=>d.d).attr("transform",d=>`translate(${d.x},${d.y})`)
-    .attr("opacity",d=>op[d.d]).attr("tabindex",0).attr("role","button").attr("aria-label",d=>disp(d.b)+"を中心に見る");
+  const nd=root.append("g").selectAll("g").data(nodes).join("g").attr("class",d=>"s-node"+(d.d===0?" hit":"")+(d.d<0?" extra":"")).attr("data-tip-node",d=>d.id).attr("data-tip-d",d=>Math.max(d.d,0)).attr("transform",d=>`translate(${d.x},${d.y})`)
+    .attr("opacity",d=>d.d<0?.6:op[d.d]).attr("tabindex",0).attr("role","button").attr("aria-label",d=>disp(d.b)+"を中心に見る");
   nd.append("circle").attr("r",d=>d.d===0?9:6);
   nd.append("text").attr("text-anchor","middle").attr("y",d=>d.d===0?-14:-11).text(d=>d.b.title.length>12?d.b.title.slice(0,12)+"…":d.b.title);
   const go=(ev,d)=>goBook(d.id);
   nd.on("click",go).on("keydown",(ev,d)=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();go(ev,d)}})
-    .on("mouseenter",(ev,d)=>lk.classed("dim",l=>l.e.from!==d.id&&l.e.to!==d.id)).on("mouseleave",()=>lk.classed("dim",false));
+    .on("mouseenter",(ev,d)=>{if(!path)lk.classed("dim",l=>l.source.id!==d.id&&l.target.id!==d.id)}).on("mouseleave",()=>lk.classed("dim",false));
+  if(!path)return;
+  // 再生：ほかを薄くし、1冊ずつ順に光らせて番号を振る
+  lk.classed("faint",true);nd.classed("faint",true);
+  const pos=Object.fromEntries(nodes.map(n=>[n.id,n]));
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches,step=reduce?0:900;
+  const walker=root.append("circle").attr("class","walker").attr("r",7).attr("cx",pos[path[0]].x).attr("cy",pos[path[0]].y);
+  let k=0;
+  path.forEach((id,i)=>{
+    sTimers.push(setTimeout(()=>{
+      nd.filter(d=>d.id===id).classed("faint",false).classed("lit",true).raise();
+      if(i>0){const a=path[i-1];lk.filter(l=>l.source.id===a&&l.target.id===id||l.source.id===id&&l.target.id===a).classed("faint",false).classed("lit",true)}
+      if(i===0||path[i-1]!==id)root.append("text").attr("class","stepno").attr("x",pos[id].x+11).attr("y",pos[id].y+15).text(++k);
+      if(!reduce)walker.transition().duration(step*.8).attr("cx",pos[id].x).attr("cy",pos[id].y);else walker.attr("cx",pos[id].x).attr("cy",pos[id].y);
+    },i*step));
+  });
 }
 $("#sTop").onchange=ev=>{S.sTop=+ev.target.value;renderSearch()};
 $("#sDepth").onchange=ev=>{S.sDepth=+ev.target.value;renderSearch()};
