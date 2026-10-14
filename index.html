@@ -224,6 +224,15 @@ svg text{font-family:var(--f-ui)}
 .dseg button{border:0;border-left:1px solid var(--line);background:var(--surface);color:var(--ink);padding:3px 9px;font-size:12px}
 .dseg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .sugg .all{color:var(--accent);font-weight:600;font-size:13px}
+.tip{position:fixed;z-index:60;max-width:320px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 8px 24px rgb(0 0 0 / .16);padding:10px 12px;font-size:12.5px;line-height:1.55;pointer-events:none}
+.tip .tt{font-family:var(--f-disp);font-weight:700;font-size:14px;line-height:1.4}
+.tip .ta{color:var(--muted);font-size:11.5px}
+.tip p{margin:6px 0 0}
+.tip .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.tip .meta{color:var(--muted);font-size:11.5px;margin-top:6px;font-family:var(--f-mono)}
+.tip .hint{color:var(--faint);font-size:11px;margin-top:4px}
+line.hit{stroke:transparent;stroke-width:12;cursor:pointer}
+[data-tip-edge] .e-lab,.e-lab[data-tip-edge]{cursor:pointer}
 .walker{fill:var(--accent)}
 .side{display:flex;flex-direction:column;gap:14px}
 .side .panel{padding:16px}
@@ -932,13 +941,14 @@ function drawSearchGraph(dist){
   svg.call(d3.zoom().scaleExtent([.6,3]).on("zoom",ev=>root.attr("transform",ev.transform)));
   const lk=root.append("g").selectAll("line").data(links).join("line").attr("class",d=>"s-link e-"+fam(d.e))
     .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
-  lk.append("title").text(d=>`${disp(B[d.e.from])} ${typeLabel(d.e)} ${disp(B[d.e.to])}`);
+  root.append("g").selectAll("line").data(links).join("line").attr("class","hit").attr("data-tip-edge",d=>d.e.id)
+    .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y)
+    .on("mouseenter",(ev,d)=>lk.classed("dim",l=>l!==d)).on("mouseleave",()=>lk.classed("dim",false));
   const op=[1,.95,.72,.55];
-  const nd=root.append("g").selectAll("g").data(nodes).join("g").attr("class",d=>"s-node"+(d.d===0?" hit":"")).attr("transform",d=>`translate(${d.x},${d.y})`)
+  const nd=root.append("g").selectAll("g").data(nodes).join("g").attr("class",d=>"s-node"+(d.d===0?" hit":"")).attr("data-tip-node",d=>d.id).attr("data-tip-d",d=>d.d).attr("transform",d=>`translate(${d.x},${d.y})`)
     .attr("opacity",d=>op[d.d]).attr("tabindex",0).attr("role","button").attr("aria-label",d=>disp(d.b)+"を中心に見る");
   nd.append("circle").attr("r",d=>d.d===0?9:6);
   nd.append("text").attr("text-anchor","middle").attr("y",d=>d.d===0?-14:-11).text(d=>d.b.title.length>12?d.b.title.slice(0,12)+"…":d.b.title);
-  nd.append("title").text(d=>`${disp(d.b)}　${d.b.author}${d.d?`（検索結果から${d.d}本先）`:""}`);
   const go=(ev,d)=>goBook(d.id);
   nd.on("click",go).on("keydown",(ev,d)=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();go(ev,d)}})
     .on("mouseenter",(ev,d)=>lk.classed("dim",l=>l.e.from!==d.id&&l.e.to!==d.id)).on("mouseleave",()=>lk.classed("dim",false));
@@ -1019,8 +1029,9 @@ function drawEgo(){
   nodes.forEach(nd=>{
     const e=nd.es.find(visible)||nd.es[0],f=fam(e);
     const [x1,y1]=clip(nd.x,nd.y,cx,cy,cw/2+4,ch/2+4),[x2,y2]=clip(cx,cy,nd.x,nd.y,nd.w/2+4,nd.h/2+4);
-    const g=eg.append("g").attr("class","eg"+(nd.vis?"":" dim")).attr("data-id",nd.id);
+    const g=eg.append("g").attr("class","eg"+(nd.vis?"":" dim")).attr("data-id",nd.id).attr("data-tip-edge",nd.es.map(x=>x.id).join(","));
     const line=g.append("line").attr("class","e-line e-"+f).attr("x1",x1).attr("y1",y1).attr("x2",x2).attr("y2",y2);
+    g.append("line").attr("class","hit").attr("x1",x1).attr("y1",y1).attr("x2",x2).attr("y2",y2);
     if(TYPES[e.type].dir){ if(e.from===c) line.attr("marker-end",`url(#m-${f})`); else line.attr("marker-start",`url(#m-${f})`); }
     const lab=nd.es.map(typeLabel).join("・"),lw=lab.length*11+14;
     const mx=x1+(x2-x1)*.5,my=y1+(y2-y1)*.5;
@@ -1030,7 +1041,7 @@ function drawEgo(){
   });
   const ng=svg.append("g");
   nodes.forEach(nd=>{
-    const g=ng.append("g").attr("class","nb"+(nd.vis?"":" dim")).attr("data-id",nd.id).attr("transform",`translate(${nd.x},${nd.y})`)
+    const g=ng.append("g").attr("class","nb"+(nd.vis?"":" dim")).attr("data-id",nd.id).attr("data-tip-node",nd.id).attr("transform",`translate(${nd.x},${nd.y})`)
       .attr("tabindex",0).attr("role","button").attr("aria-label",disp(nd.b)+"へ移動");
     g.append("rect").attr("class","n-box").attr("x",-nd.w/2).attr("y",-nd.h/2).attr("width",nd.w).attr("height",nd.h).attr("rx",4);
     g.append("text").attr("class","n-title").attr("text-anchor","middle").attr("y",-3).text(nd.t);
@@ -1040,7 +1051,7 @@ function drawEgo(){
     g.on("click",go).on("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();go()}})
      .on("mouseenter",()=>hot(nd.id,true)).on("mouseleave",()=>hot(nd.id,false));
   });
-  const cg=svg.append("g").attr("class","n-center").attr("transform",`translate(${cx},${cy})`);
+  const cg=svg.append("g").attr("class","n-center").attr("data-tip-node",c).attr("transform",`translate(${cx},${cy})`);
   cg.append("rect").attr("class","n-box").attr("x",-cw/2).attr("y",-ch/2).attr("width",cw).attr("height",ch).attr("rx",5);
   cg.append("text").attr("class","n-title").attr("text-anchor","middle").attr("y",-2).text(cb.title.length>16?cb.title.slice(0,16)+"…":cb.title);
   cg.append("text").attr("class","n-auth").attr("text-anchor","middle").attr("y",17).text(cb.author+"・"+cb.year);
@@ -1067,10 +1078,11 @@ function drawEgoDeep(dep){
   links.forEach(l=>{
     const e=l.e,touch=e.from===c||e.to===c,ok=touch?visible(e):famOK(e),f=fam(e);
     g.append("line").attr("class","s-link e-"+f+(ok?"":" dim")).attr("x1",l.source.x).attr("y1",l.source.y).attr("x2",l.target.x).attr("y2",l.target.y)
-      .attr("stroke-width",touch?2:1.3).append("title").text(`${disp(B[e.from])} ${typeLabel(e)} ${disp(B[e.to])}`);
+      .attr("stroke-width",touch?2:1.3);
+    g.append("line").attr("class","hit").attr("data-tip-edge",e.id).attr("x1",l.source.x).attr("y1",l.source.y).attr("x2",l.target.x).attr("y2",l.target.y);
     if(touch&&ok){
       const lab=typeLabel(e),lw=lab.length*11+14,o=l.source.id===c?l.target:l.source;
-      const lg=g.append("g").attr("class","e-lab "+f).attr("transform",`translate(${W/2+(o.x-W/2)*.55},${H/2+(o.y-H/2)*.55})`);
+      const lg=g.append("g").attr("class","e-lab "+f).attr("data-tip-edge",e.id).attr("transform",`translate(${W/2+(o.x-W/2)*.55},${H/2+(o.y-H/2)*.55})`);
       lg.append("rect").attr("x",-lw/2).attr("y",-10).attr("width",lw).attr("height",20).attr("rx",3);
       lg.append("text").attr("text-anchor","middle").attr("dy",4).text(lab);
     }
@@ -1078,17 +1090,16 @@ function drawEgoDeep(dep){
   const op=[1,1,.75,.58];
   nodes.filter(n=>n.d>0).forEach(n=>{
     const vis=n.d>1||edgesOf(c).some(e=>other(e,c)===n.id&&visible(e));
-    const ng=svg.append("g").attr("class","nb s-node"+(vis?"":" dim")).attr("data-id",n.id).attr("transform",`translate(${n.x},${n.y})`)
+    const ng=svg.append("g").attr("class","nb s-node"+(vis?"":" dim")).attr("data-id",n.id).attr("data-tip-node",n.id).attr("transform",`translate(${n.x},${n.y})`)
       .attr("opacity",vis?op[n.d]:.28).attr("tabindex",0).attr("role","button").attr("aria-label",disp(n.b)+"へ移動");
     ng.append("circle").attr("r",n.d===1?8:5.5);
     ng.append("text").attr("text-anchor","middle").attr("y",-12).text(n.b.title.length>11?n.b.title.slice(0,11)+"…":n.b.title);
-    ng.append("title").text(`${disp(n.b)}　${n.b.author}（この本から${n.d}本先）`);
     const go=()=>goBook(n.id,n.d===1?findEdge(c,n.id):null);
     ng.on("click",go).on("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();go()}})
       .on("mouseenter",()=>hot(n.id,true)).on("mouseleave",()=>hot(n.id,false));
   });
   const cw=Math.min(cb.title.length*16+36,280),ch=56;
-  const cg=svg.append("g").attr("class","n-center").attr("transform",`translate(${W/2},${H/2})`);
+  const cg=svg.append("g").attr("class","n-center").attr("data-tip-node",c).attr("transform",`translate(${W/2},${H/2})`);
   cg.append("rect").attr("class","n-box").attr("x",-cw/2).attr("y",-ch/2).attr("width",cw).attr("height",ch).attr("rx",5);
   cg.append("text").attr("class","n-title").attr("text-anchor","middle").attr("y",-2).text(cb.title.length>16?cb.title.slice(0,16)+"…":cb.title);
   cg.append("text").attr("class","n-auth").attr("text-anchor","middle").attr("y",17).text(cb.author+"・"+cb.year);
@@ -1200,9 +1211,10 @@ function drawGlobal(){
     .attr("stroke-width",d=>S.mode==="trail"?1+7*d.e.trav/maxT:1.4)
     .attr("stroke-opacity",d=>S.mode==="trail"?.15+.85*d.e.trav/maxT:null)
     .attr("stroke-dasharray",d=>d.e.by?null:null);
-  lk.append("title").text(d=>`${disp(B[d.e.from])} ${typeLabel(d.e)} ${disp(B[d.e.to])}（辿られた ${d.e.trav}回）`);
+  root.append("g").selectAll("line").data(G.links).join("line").attr("class","hit").attr("data-tip-edge",d=>d.e.id)
+    .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
   const deg={};EDGES.forEach(e=>{deg[e.from]=(deg[e.from]||0)+1;deg[e.to]=(deg[e.to]||0)+1});
-  const nd=root.append("g").selectAll("g").data(G.nodes).join("g").attr("class","g-node").attr("transform",d=>`translate(${d.x},${d.y})`)
+  const nd=root.append("g").selectAll("g").data(G.nodes).join("g").attr("class","g-node").attr("data-tip-node",d=>d.id).attr("transform",d=>`translate(${d.x},${d.y})`)
     .attr("tabindex",0).attr("role","button").attr("aria-label",d=>disp(d.b)+"を開く");
   nd.append("circle").attr("r",d=>4+Math.sqrt(deg[d.id]||1)*2);
   nd.append("text").attr("x",0).attr("y",d=>-(8+Math.sqrt(deg[d.id]||1)*2)).attr("text-anchor","middle").text(d=>d.b.title.length>10?d.b.title.slice(0,10)+"…":d.b.title);
@@ -1535,12 +1547,13 @@ function renderMine(){
       const ln=g.append("line").attr("class","e-line e-"+f).attr("x1",l.source.x).attr("y1",l.source.y).attr("x2",l.target.x).attr("y2",l.target.y);
       if(TYPES[l.e.type].dir)ln.attr("marker-end",`url(#mm-${f})`);
       if(S.seed.has(l.e.id))ln.attr("stroke-dasharray","5 4");
-      const lg=g.append("g").attr("class","e-lab "+f).attr("transform",`translate(${(l.source.x+l.target.x)/2},${(l.source.y+l.target.y)/2})`);
+      g.append("line").attr("class","hit").attr("data-tip-edge",l.e.id).attr("x1",l.source.x).attr("y1",l.source.y).attr("x2",l.target.x).attr("y2",l.target.y);
+      const lg=g.append("g").attr("class","e-lab "+f).attr("data-tip-edge",l.e.id).attr("transform",`translate(${(l.source.x+l.target.x)/2},${(l.source.y+l.target.y)/2})`);
       const lw=typeLabel(l.e).length*11+14;
       lg.append("rect").attr("x",-lw/2).attr("y",-10).attr("width",lw).attr("height",20).attr("rx",3);
       lg.append("text").attr("text-anchor","middle").attr("dy",4).text(typeLabel(l.e));
     });
-    const ng=svg.append("g").selectAll("g").data(nodes).join("g").attr("class","g-node").attr("transform",d=>`translate(${d.x},${d.y})`);
+    const ng=svg.append("g").selectAll("g").data(nodes).join("g").attr("class","g-node").attr("data-tip-node",d=>d.id).attr("transform",d=>`translate(${d.x},${d.y})`);
     ng.append("circle").attr("r",9);
     ng.append("text").attr("y",-15).attr("text-anchor","middle").text(d=>d.b.title.length>12?d.b.title.slice(0,12)+"…":d.b.title);
     ng.on("click",(ev,d)=>goBook(d.id));
@@ -1555,6 +1568,44 @@ function renderMine(){
     <div class="via">${typeChips(v.e)}　${esc(disp(B[v.from]))}から${c.via.length>1?`（ほか${c.via.length-1}本の関係）`:""}</div></div>`}).join("")
     :`<p style="margin:0;color:var(--muted);font-size:13px">関係を加えると、ここに次の本が現れます。</p>`;
 }
+
+/* ---------- TOOLTIP（グラフの本と線にホバーで内容を出す） ---------- */
+function tipNode(id,d){
+  const b=B[id],es=edgesOf(id),trav=es.reduce((s,e)=>s+e.trav,0);
+  return `<div class="tt">${esc(disp(b))}</div><div class="ta">${esc(b.author)}・${b.year}・${esc(b.field)}（NDC ${esc(CLASS_NAME[b.cls])}）</div>
+    <p>${esc(b.sum)}</p><div class="meta">関係 ${es.length}本・辿られた ${trav}回${d>0?`・検索結果から${d}本先`:""}</div>
+    ${id===S.center&&S.view==="book"?"":`<div class="hint">クリックでこの本を中心に表示</div>`}`;
+}
+function tipEdges(ids){
+  return ids.map(id=>EDGES.find(e=>e.id===id)).filter(Boolean).map(e=>`<div class="row">${typeChips(e)}${statusPill(e,true)}<span class="ta">${e.by?`追加：${esc(e.by)}`:"AI生成"}</span></div>
+    <div style="font-family:var(--f-disp);font-weight:700">${sentence(e,null,false)}。</div>
+    <p style="color:var(--muted)">${esc(e.why)}</p>
+    <div class="meta">同意 ${e.agree}・不同意 ${e.dis}・辿られた ${e.trav}回</div>`).join(`<hr style="border:0;border-top:1px solid var(--line);margin:8px 0">`)
+    +`<div class="hint">線をクリックで評価の履歴</div>`;
+}
+(function(){
+  const tip=document.createElement("div");tip.className="tip";tip.hidden=true;tip.setAttribute("role","tooltip");document.body.appendChild(tip);
+  let cur=null;
+  const find=t=>t&&t.closest?t.closest("[data-tip-node],[data-tip-edge]"):null;
+  const html=el=>el.dataset.tipNode?tipNode(el.dataset.tipNode,+(el.dataset.tipD||0)):tipEdges(el.dataset.tipEdge.split(","));
+  const hide=()=>{cur=null;tip.hidden=true};
+  function place(x,y){
+    const r=tip.getBoundingClientRect();let l=x+14,t=y+14;
+    if(l+r.width>innerWidth-8)l=x-r.width-14;
+    if(t+r.height>innerHeight-8)t=y-r.height-14;
+    tip.style.left=Math.max(8,l)+"px";tip.style.top=Math.max(8,t)+"px";
+  }
+  function open(el,x,y){if(el!==cur){cur=el;tip.innerHTML=html(el);tip.hidden=false}place(x,y)}
+  document.addEventListener("mouseover",e=>{const el=find(e.target);el?open(el,e.clientX,e.clientY):hide()});
+  document.addEventListener("mousemove",e=>{if(cur)place(e.clientX,e.clientY)});
+  document.addEventListener("focusin",e=>{const el=find(e.target);if(!el)return hide();const r=el.getBoundingClientRect();open(el,r.right,r.bottom)});
+  document.addEventListener("focusout",hide);
+  document.addEventListener("click",e=>{
+    const t=e.target.closest?.("line.hit,.e-lab");const el=t&&find(t);hide();
+    if(el?.dataset.tipEdge)openHist(el.dataset.tipEdge.split(",")[0]);
+  });
+  addEventListener("scroll",hide,true);
+})();
 
 /* ---------- render ---------- */
 function updateCounts(){
