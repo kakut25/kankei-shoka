@@ -14,7 +14,6 @@
   --accent:#2B6C70; --accent-ink:#FFFFFF; --accent-soft:#DCEBEA;
   --opp:#B3472D; --inh:#3561A6; --par:#56853A; --com:#9C761C;
   --opp-soft:#F6E3DC; --inh-soft:#E0E8F5; --par-soft:#E3EEDB; --com-soft:#F3EAD3;
-  --cls-lab-op:.1;
   --f-disp:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-ui:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -23,7 +22,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --cls-lab-op:.2; --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
+    --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
     --accent:#6DB5B8; --accent-ink:#0E1415; --accent-soft:#1F3435;
     --opp:#E4826A; --inh:#82A7E6; --par:#94C274; --com:#D8B45E;
     --opp-soft:#3A2521; --inh-soft:#1F2A3E; --par-soft:#243423; --com-soft:#3A3120;
@@ -31,7 +30,7 @@
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --cls-lab-op:.2; --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
+  --bg:#131719; --surface:#1B2023; --surface-2:#232A2D; --ink:#E4E8E5; --muted:#A0A9AC; --faint:#6F787C; --line:#30383B;
   --accent:#6DB5B8; --accent-ink:#0E1415; --accent-soft:#1F3435;
   --opp:#E4826A; --inh:#82A7E6; --par:#94C274; --com:#D8B45E;
   --opp-soft:#3A2521; --inh-soft:#1F2A3E; --par-soft:#243423; --com-soft:#3A3120;
@@ -172,17 +171,6 @@ svg text{font-family:var(--f-ui)}
 .otrail .who{font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:center}
 .otrail .who .sp{flex:1}
 
-/* global */
-.space-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
-.space-tool{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.seg button{border:0;background:var(--surface);padding:5px 12px;font-size:12.5px}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-#global{width:100%;height:auto;display:block;min-width:640px;cursor:grab}
-.cls-lab{fill:var(--ink);opacity:var(--cls-lab-op);pointer-events:none;font-family:var(--f-disp);font-weight:700;font-size:34px}
-.g-link{stroke-opacity:.55;stroke-width:1.3}
-.g-link.faint{stroke-opacity:.12}
-.g-link.lit{stroke-opacity:1;stroke:var(--accent)!important}
 .g-node circle{fill:var(--surface);stroke:var(--ink);stroke-width:1.4}
 .g-node text{fill:var(--ink);font-size:11px;font-family:var(--f-disp);font-weight:700;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
 .g-node{cursor:pointer}
@@ -240,9 +228,6 @@ line.hit{stroke:transparent;stroke-width:12;cursor:pointer}
 .tbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .tbtn .who{font-size:11.5px;color:var(--muted)}
 .tbtn .path{font-size:12.5px}
-.keyrow{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
-.keyrow span{display:flex;align-items:center;gap:8px}
-.keyrow .ln{width:22px;height:0;border-top:2.5px solid}
 
 
 /* evaluate */
@@ -346,7 +331,7 @@ form.cmt-form .row input{flex:1;min-width:0}
 @media (max-width:860px){
   body{padding-inline:16px}
   .top{margin-inline:-16px;padding-inline:16px}
-  .book-grid,.space-grid,.eval-grid,.my-grid,.below,.search-grid{grid-template-columns:minmax(0,1fr)}
+  .book-grid,.eval-grid,.my-grid,.below,.search-grid{grid-template-columns:minmax(0,1fr)}
   .pair{grid-template-columns:1fr}
   .pair .mid .arrow{transform:rotate(90deg)}
   .pickpair{grid-template-columns:1fr}
@@ -372,8 +357,7 @@ form.cmt-form .row input{flex:1;min-width:0}
       </div>
     </div>
     <nav class="tabs" role="tablist" aria-label="画面">
-      <button role="tab" data-view="book" aria-selected="true">新しい出会い</button>
-      <button role="tab" data-view="space" aria-selected="false">知の空間</button>
+      <button role="tab" data-view="book" aria-selected="true">関係を辿る</button>
       <button role="tab" data-view="eval" aria-selected="false">関係を評価する</button>
       <button role="tab" data-view="mine" aria-selected="false">わたしの空間<span class="cnt" id="mcnt"></span></button>
     </nav>
@@ -423,7 +407,7 @@ form.cmt-form .row input{flex:1;min-width:0}
 
     <!-- SEARCH RESULTS -->
     <section id="v-search" hidden>
-      <p class="eyebrow">検索結果</p>
+      <p class="eyebrow" id="sEyebrow">検索結果</p>
       <h2 id="sTitle"></h2>
       <p class="lead" id="sLead" style="margin:0 0 14px"></p>
       <div class="search-grid">
@@ -451,38 +435,6 @@ form.cmt-form .row input{flex:1;min-width:0}
             <span>本をクリックすると、その本を中心にしたグラフへ移動します</span>
           </div>
           <p class="capnote" id="sCap" hidden></p>
-        </div>
-      </div>
-    </section>
-
-    <!-- SPACE -->
-    <section id="v-space" hidden>
-      <div class="space-grid">
-        <div class="panel" style="overflow:hidden">
-          <div class="space-tool">
-            <div class="seg" role="group" aria-label="線の表示">
-              <button id="modeType" aria-pressed="true">関係の種類で色分け</button>
-              <button id="modeTrail" aria-pressed="false">軌跡の濃さで表示</button>
-            </div>
-            <span style="font-size:12px;color:var(--muted)">背景の大きな文字は日本十進分類法（NDC）の類。分類をまたぐ線が「分野を越えた関係」です。ドラッグで移動、ホイールで拡大。</span>
-          </div>
-          <div class="svgbox"><svg id="global" viewBox="0 0 1000 660" role="img" aria-label="32冊の関係の全体ネットワーク"></svg></div>
-        </div>
-        <div class="side">
-          <div class="panel">
-            <h3>凡例</h3>
-            <div class="keyrow">
-              <span><i class="ln" style="border-color:var(--opp)"></i>対立：批判・矛盾・異なる答え</span>
-              <span><i class="ln" style="border-color:var(--inh)"></i>継承：発展・影響・具体化・抽象化</span>
-              <span><i class="ln" style="border-color:var(--par)"></i>並列：同じ問い・類似事例</span>
-              <span><i class="ln" style="border-color:var(--com)"></i>補完</span>
-            </div>
-          </div>
-          <div class="panel">
-            <h3>最近の軌跡を再生する</h3>
-            <p style="margin:0 0 10px;font-size:12.5px;color:var(--muted)">誰かが辿った道筋を、空間の上でなぞります。</p>
-            <div class="tlist" id="tlist"></div>
-          </div>
         </div>
       </div>
     </section>
@@ -734,8 +686,8 @@ const S={view:"book",center:START,fams:new Set(FAM_ORDER),cross:false,
   trail:[...(SAVED?.trail||[]),START].slice(-12),
   read:new Set(SAVED?.read||["jacobs","lynch","oldenburg"]),mine:new Set(SAVED?.mine||["e7","s11","s20","e13"]),seed:new Set(["e7","s11","s20","e13"]),
   myVote:SAVED?.myVote||{},fixes:SAVED?.fixes||{},log:SAVED?.log||[],hist:SAVED?.hist||["jacobs"],
-  mode:"type",replay:null,fixOpen:false,evA:"",evB:"",evDraft:null,
-  egoDepth:"auto",sq:"",sTop:5,sDepth:1,prevView:"book",sReplay:null};
+  fixOpen:false,evA:"",evB:"",evDraft:null,
+  egoDepth:"auto",sq:"",sTop:5,sDepth:1,prevView:"book",sReplay:null,sSeed:null};
 // 自分で追加した関係を復元し、自分の評価を数に反映する
 const addedEdge=r=>({...r,type:r.types[0],q:null,by:"あなた",agree:0,dis:0,trav:0});
 const ADDED=SAVED?.added||[];
@@ -767,8 +719,8 @@ function typeChips(e){return e.types.map(typeChip).join("")}
 /* ---------- navigation ---------- */
 function show(view){
   S.view=view;
-  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.view===view));
-  ["book","search","space","eval","mine"].forEach(v=>$("#v-"+v).hidden=v!==view);
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.view===(view==="search"?"book":view)));
+  ["book","search","eval","mine"].forEach(v=>$("#v-"+v).hidden=v!==view);
   render();
   window.scrollTo({top:0});
 }
@@ -802,7 +754,12 @@ function searchBooks(v){
 }
 function openSearch(v){
   if(S.view!=="search")S.prevView=S.view;
-  S.sq=v.trim();S.sReplay=null;show("search");
+  S.sq=v.trim();S.sSeed=null;S.sReplay=null;show("search");
+}
+// 1冊を起点にした関係の広がりの上で、軌跡を再生する
+function openAround(id,replay){
+  if(S.view!=="search")S.prevView=S.view;
+  S.sq="";S.sSeed=id;S.sReplay=replay;show("search");
 }
 (function(){
   const q=$("#q"),box=$("#sugg");let idx=0,res=[];
@@ -885,11 +842,14 @@ function famFilterHTML(cnt){
 }
 function renderSearch(){
   $("#sTop").value=S.sTop;$("#sDepth").value=S.sDepth;
-  const all=searchBooks(S.sq),top=all.slice(0,S.sTop);
-  $("#sTitle").textContent=`「${S.sq}」の検索結果`;
-  $("#sLead").innerHTML=`${all.length}冊が当てはまりました${all.length>S.sTop?`（上位${S.sTop}冊を表示）`:""}。スペースで区切った語は、すべてを含む本に絞ります。　<button class="booklink" id="sBack" type="button" style="font-family:inherit;font-weight:400">検索を閉じる</button>`;
+  const seed=S.sSeed&&B[S.sSeed],all=seed?[{b:seed,hit:["起点"]}]:searchBooks(S.sq),top=all.slice(0,S.sTop);
+  $("#sEyebrow").textContent=seed?"関係の広がり":"検索結果";
+  $("#sTitle").textContent=seed?`${disp(seed)}から辿る`:`「${S.sq}」の検索結果`;
+  const back=`　<button class="booklink" id="sBack" type="button" style="font-family:inherit;font-weight:400">${seed?"閉じる":"検索を閉じる"}</button>`;
+  $("#sLead").innerHTML=(seed?"この本から関係を辿った範囲に、軌跡を重ねて表示します。"
+    :`${all.length}冊が当てはまりました${all.length>S.sTop?`（上位${S.sTop}冊を表示）`:""}。スペースで区切った語は、すべてを含む本に絞ります。`)+back;
   $("#sBack").onclick=()=>show(S.prevView||"book");
-  $("#sres").innerHTML=top.length?top.map((x,i)=>`<li><span class="rk">${i+1}</span><span>${link(x.b.id)}</span><span class="m">${esc(x.b.author)}・${esc(x.b.field)}　一致：${x.hit.join("・")}</span></li>`).join("")
+  $("#sres").innerHTML=top.length?top.map((x,i)=>`<li><span class="rk">${i+1}</span><span>${link(x.b.id)}</span><span class="m">${esc(x.b.author)}・${esc(x.b.field)}${seed?"":`　一致：${x.hit.join("・")}`}</span></li>`).join("")
     +(all.length>S.sTop?`<li style="display:block"><span class="more">ほかに${all.length-S.sTop}冊。上位の件数を増やすと表示されます。</span></li>`:"")
     :`<li style="display:block"><span class="more">当てはまる本はありません。語を減らすか、別の語で試してください。</span></li>`;
   $("#sfilters").innerHTML=famFilterHTML();
@@ -1004,10 +964,10 @@ function renderBook(){
   $("#crumbs").innerHTML=S.trail.map((id,i)=>i===S.trail.length-1?`<span class="cur">${esc(disp(B[id]))}</span>`:`${link(id)}<span class="ar">→</span>`).join("")
     +(S.trail.length<2?`<span style="color:var(--muted);font-size:12.5px;margin-left:8px">関係する本を開くと、辿った道がここに残ります。</span>`:"");
   const ot=TRAILS.map((t,i)=>({t,i})).filter(x=>x.t.path.includes(b.id));
-  $("#others").innerHTML=ot.length?ot.map(({t,i})=>`<div class="otrail"><div class="who"><span>${esc(t.who)}・${t.when}</span><span class="sp"></span><button class="btn small" data-replay="${i}">知の空間で再生</button></div>
+  $("#others").innerHTML=ot.length?ot.map(({t,i})=>`<div class="otrail"><div class="who"><span>${esc(t.who)}・${t.when}</span><span class="sp"></span><button class="btn small" data-replay="${i}">グラフで再生</button></div>
     <div class="crumbs">${t.path.map((id,k)=>(id===b.id?`<span class="cur">${esc(disp(B[id]))}</span>`:link(id))+(k<t.path.length-1?`<span class="ar">→</span>`:"")).join("")}</div></div>`).join("")
     :`<p style="margin:0;color:var(--muted);font-size:13px">この本を通った軌跡はまだありません。最初の一人になれます。</p>`;
-  $("#others").querySelectorAll("[data-replay]").forEach(el=>el.onclick=()=>{S.replay=+el.dataset.replay;S.mode="trail";show("space")});
+  $("#others").querySelectorAll("[data-replay]").forEach(el=>el.onclick=()=>openAround(b.id,"t"+el.dataset.replay));
 }
 function visible(e){const o=B[other(e,S.center)];return e.types.some(t=>S.fams.has(TYPES[t].fam))&&(!S.cross||o.cls!==B[S.center].cls)}
 function hot(id,on){
@@ -1180,75 +1140,6 @@ $("#cmtForm").addEventListener("submit",ev=>{
   $("#cmtText").value="";renderComments();
   toast(ok?"コメントを投稿しました。":"コメントを投稿しました（このブラウザでは保存できないため、閉じると消えます）。");
 });
-
-/* ---------- SPACE (global) ---------- */
-let G=null,GN=0;
-function layoutGlobal(){
-  if(G&&GN===EDGES.length)return;
-  const centers={5:[330,330],3:[700,380],1:[560,120],2:[830,590],9:[860,150],4:[150,560]};
-  const prev=G?Object.fromEntries(G.nodes.map(n=>[n.id,n])):{};
-  const nodes=BOOKS.map(b=>({id:b.id,b,cls:b.cls,x:prev[b.id]?.x??centers[b.cls][0]+(hash(b.id)%60-30),y:prev[b.id]?.y??centers[b.cls][1]+((hash(b.id)>>8)%60-30)}));
-  const links=EDGES.map(e=>({source:e.from,target:e.to,e}));
-  const sim=d3.forceSimulation(nodes)
-    .force("link",d3.forceLink(links).id(d=>d.id).distance(95).strength(.06))
-    .force("charge",d3.forceManyBody().strength(-300))
-    .force("x",d3.forceX(d=>centers[d.cls][0]).strength(.16))
-    .force("y",d3.forceY(d=>centers[d.cls][1]).strength(.16))
-    .force("collide",d3.forceCollide(48)).stop();
-  for(let i=0;i<420;i++)sim.tick();
-  nodes.forEach(n=>{n.x=Math.max(70,Math.min(930,n.x));n.y=Math.max(40,Math.min(625,n.y))});
-  G={nodes,links};GN=EDGES.length;
-}
-let replayTimer=[];
-function drawGlobal(){
-  layoutGlobal();
-  replayTimer.forEach(clearTimeout);replayTimer=[];
-  const svg=d3.select("#global");svg.selectAll("*").remove();
-  const root=svg.append("g");
-  svg.call(d3.zoom().scaleExtent([.6,3]).on("zoom",ev=>root.attr("transform",ev.transform)));
-  const byCls=d3.group(G.nodes,d=>d.cls);
-  root.append("g").selectAll("text").data([...byCls]).join("text").attr("class","cls-lab").attr("text-anchor","middle")
-    .attr("x",d=>d3.mean(d[1],n=>n.x)).attr("y",d=>d3.mean(d[1],n=>n.y)+12).text(d=>CLASS_NAME[d[0]]);
-  const maxT=d3.max(EDGES,e=>e.trav);
-  const trail=S.replay!=null?TRAILS[S.replay]:null;
-  const lk=root.append("g").selectAll("line").data(G.links).join("line")
-    .attr("class",d=>"g-link e-"+fam(d.e)).attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y)
-    .attr("stroke-width",d=>S.mode==="trail"?1+7*d.e.trav/maxT:1.4)
-    .attr("stroke-opacity",d=>S.mode==="trail"?.15+.85*d.e.trav/maxT:null)
-    .attr("stroke-dasharray",d=>d.e.by?null:null);
-  root.append("g").selectAll("line").data(G.links).join("line").attr("class","hit").attr("data-tip-edge",d=>d.e.id)
-    .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
-  const deg={};EDGES.forEach(e=>{deg[e.from]=(deg[e.from]||0)+1;deg[e.to]=(deg[e.to]||0)+1});
-  const nd=root.append("g").selectAll("g").data(G.nodes).join("g").attr("class","g-node").attr("data-tip-node",d=>d.id).attr("transform",d=>`translate(${d.x},${d.y})`)
-    .attr("tabindex",0).attr("role","button").attr("aria-label",d=>disp(d.b)+"を開く");
-  nd.append("circle").attr("r",d=>4+Math.sqrt(deg[d.id]||1)*2);
-  nd.append("text").attr("x",0).attr("y",d=>-(8+Math.sqrt(deg[d.id]||1)*2)).attr("text-anchor","middle").text(d=>d.b.title.length>10?d.b.title.slice(0,10)+"…":d.b.title);
-  nd.on("click",(ev,d)=>goBook(d.id)).on("keydown",(ev,d)=>{if(ev.key==="Enter")goBook(d.id)})
-    .on("mouseenter",(ev,d)=>{if(trail)return;lk.classed("faint",l=>l.e.from!==d.id&&l.e.to!==d.id);nd.classed("faint",n=>n.id!==d.id&&!findEdge(n.id,d.id))})
-    .on("mouseleave",()=>{if(trail)return;lk.classed("faint",false);nd.classed("faint",false)});
-  // trails list
-  $("#tlist").innerHTML=TRAILS.map((t,i)=>`<button class="tbtn" data-t="${i}" aria-pressed="${S.replay===i}"><span class="who">${esc(t.who)}・${t.when}</span><span class="path">${t.path.map(id=>esc(B[id].title.length>7?B[id].title.slice(0,7)+"…":B[id].title)).join(" → ")}</span></button>`).join("")
-    +(S.replay!=null?`<button class="btn small" id="clearReplay">再生をやめる</button>`:"");
-  $("#tlist").querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.replay=+b.dataset.t;drawGlobal()});
-  const cr=$("#clearReplay");if(cr)cr.onclick=()=>{S.replay=null;drawGlobal()};
-  $("#modeType").setAttribute("aria-pressed",S.mode==="type");$("#modeTrail").setAttribute("aria-pressed",S.mode==="trail");
-  if(!trail)return;
-  // replay
-  lk.classed("faint",true);nd.classed("faint",true);
-  const pos=Object.fromEntries(G.nodes.map(n=>[n.id,n]));
-  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const walker=root.append("circle").attr("class","walker").attr("r",7).attr("cx",pos[trail.path[0]].x).attr("cy",pos[trail.path[0]].y);
-  const step=reduce?0:900;
-  trail.path.forEach((id,i)=>{
-    replayTimer.push(setTimeout(()=>{
-      nd.filter(d=>d.id===id).classed("faint",false).classed("lit",true);
-      if(i>0){const a=trail.path[i-1];lk.filter(d=>(d.e.from===a&&d.e.to===id)||(d.e.from===id&&d.e.to===a)).classed("faint",false).classed("lit",true).attr("stroke-width",4)}
-      if(!reduce)walker.transition().duration(step*.8).attr("cx",pos[id].x).attr("cy",pos[id].y);else walker.attr("cx",pos[id].x).attr("cy",pos[id].y);
-    },i*step));
-  });
-}
-$("#modeType").onclick=()=>{S.mode="type";drawGlobal()};
-$("#modeTrail").onclick=()=>{S.mode="trail";drawGlobal()};
 
 /* ---------- EVAL ---------- */
 let PICK_EA,PICK_EB;
@@ -1619,7 +1510,6 @@ function updateCounts(){
 function render(){
   if(S.view==="book")renderBook();
   else if(S.view==="search")renderSearch();
-  else if(S.view==="space")drawGlobal();
   else if(S.view==="eval")renderEval();
   else if(S.view==="mine")renderMine();
   saveState();
