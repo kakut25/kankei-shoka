@@ -144,6 +144,7 @@ svg text{font-family:var(--f-ui)}
 .legend-line span{display:inline-flex;align-items:center;gap:6px}
 
 .rels{display:flex;flex-direction:column;gap:14px}
+.book-grid .rels{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain;padding-right:6px;scrollbar-gutter:stable}
 .relgroup h3{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);letter-spacing:.06em;margin:0 0 6px}
 .relgroup h3 .bar{flex:1;height:1px;background:var(--line)}
 .rel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
@@ -270,7 +271,7 @@ form.cmt-form .row input{flex:1;min-width:0}
 
 @media (max-width:1180px){
   .book-grid{grid-template-columns:260px minmax(0,1fr)}
-  .book-grid .rels{grid-column:1 / -1}
+  .book-grid .rels{grid-column:1 / -1;position:static;max-height:none;overflow:visible;padding-right:0}
 }
 @media (max-width:860px){
   body{padding-inline:16px}
@@ -300,7 +301,7 @@ form.cmt-form .row input{flex:1;min-width:0}
       <button class="issue-toggle" id="issueToggle" aria-pressed="false"><i></i>論点を重ねる</button>
     </div>
     <nav class="tabs" role="tablist" aria-label="画面">
-      <button role="tab" data-view="book" aria-selected="true">本から</button>
+      <button role="tab" data-view="book" aria-selected="true">新しい出会い</button>
       <button role="tab" data-view="space" aria-selected="false">知の空間</button>
       <button role="tab" data-view="eval" aria-selected="false">関係を評価する<span class="cnt" id="qcnt"></span></button>
       <button role="tab" data-view="mine" aria-selected="false">わたしの空間<span class="cnt" id="mcnt"></span></button>
@@ -618,7 +619,9 @@ const other=(e,id)=>e.from===id?e.to:e.from;
 const edgesOf=id=>EDGES.filter(e=>e.from===id||e.to===id);
 
 /* ---------- state ---------- */
-const S={view:"book",center:"jacobs",fams:new Set(FAM_ORDER),cross:false,trail:["jacobs"],
+/* 初期表示はランダムな一冊（前回見た本として履歴にあるジェイコブズは除く） */
+const START=(c=>c[Math.floor(Math.random()*c.length)])(BOOKS.filter(b=>b.id!=="jacobs").map(b=>b.id));
+const S={view:"book",center:START,fams:new Set(FAM_ORDER),cross:false,trail:[START],
   read:new Set(["jacobs","lynch","oldenburg"]),mine:new Set(["e7","s11","s20","e13"]),seed:new Set(["e7","s11","s20","e13"]),
   myVote:{},mode:"type",replay:null,qi:0,fixOpen:false,done:0};
 let queue=[];
@@ -668,17 +671,30 @@ $("#issueToggle").addEventListener("click",e=>{const on=document.body.classList.
 /* ---------- search ---------- */
 (function(){
   const q=$("#q"),box=$("#sugg");let idx=0,res=[];
+  const hist=["jacobs"];
   function draw(){
     const v=q.value.trim();
-    if(!v){box.hidden=true;return}
+    if(!v){
+      res=hist.map(id=>B[id]);
+      if(!res.length||document.activeElement!==q){box.hidden=true;return}
+      idx=Math.min(idx,res.length-1);
+      box.innerHTML=`<div style="padding:8px 12px 4px;color:var(--faint);font-size:11.5px">最近の検索</div>`
+        +res.map((b,i)=>`<button class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${esc(b.author)}・${esc(b.field)}</span></button>`).join("");
+      box.hidden=false;return;
+    }
     res=BOOKS.filter(b=>(b.title+b.author+b.field+CLASS_NAME[b.cls]).includes(v)).slice(0,8);
     if(!res.length){box.innerHTML=`<div style="padding:10px 12px;color:var(--muted);font-size:13px">「${esc(v)}」に一致する本はありません。書名の一部や著者名で試してください。</div>`;box.hidden=false;return}
     idx=Math.min(idx,res.length-1);
     box.innerHTML=res.map((b,i)=>`<button class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${esc(b.author)}・${esc(b.field)}・関係${edgesOf(b.id).length}本</span></button>`).join("");
     box.hidden=false;
   }
-  function pick(b){q.value="";box.hidden=true;goBook(b.id)}
+  function pick(b){
+    const i=hist.indexOf(b.id);if(i>=0)hist.splice(i,1);
+    hist.unshift(b.id);if(hist.length>6)hist.pop();
+    q.value="";box.hidden=true;q.blur();goBook(b.id);
+  }
   q.addEventListener("input",()=>{idx=0;draw()});
+  q.addEventListener("focus",()=>{idx=0;draw()});
   q.addEventListener("keydown",e=>{
     if(e.key==="ArrowDown"){idx=Math.min(idx+1,res.length-1);draw();e.preventDefault()}
     else if(e.key==="ArrowUp"){idx=Math.max(idx-1,0);draw();e.preventDefault()}
