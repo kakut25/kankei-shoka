@@ -197,6 +197,33 @@ svg text{font-family:var(--f-ui)}
 .g-node{cursor:pointer}
 .g-node.lit circle{fill:var(--accent);stroke:var(--accent)}
 .g-node.faint{opacity:.35}
+/* search results / deep ego */
+.search-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.sctl{display:flex;flex-direction:column;gap:10px;padding:16px}
+.sctl .row{display:flex;gap:10px}
+.sctl label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.sctl select{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;background:var(--surface);color:var(--ink);width:100%}
+.sres{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.sres li{display:grid;grid-template-columns:22px 1fr;gap:2px 6px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.sres li:first-child{border-top:0}
+.sres .rk{font-family:var(--f-mono);color:var(--faint)}
+.sres .m{grid-column:2;font-size:11.5px;color:var(--muted)}
+.sres .more{display:block;font-size:12px;color:var(--muted)}
+.capnote{font-size:12px;color:var(--opp);margin:6px 4px 0}
+#sgraph{width:100%;height:auto;display:block;min-width:560px}
+.s-node{cursor:pointer}
+.s-node circle{fill:var(--surface);stroke:var(--ink);stroke-width:1.3}
+.s-node.hit circle{fill:var(--accent);stroke:var(--accent)}
+.s-node text{fill:var(--ink);font-size:11px;font-family:var(--f-disp);font-weight:700;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
+.s-node.hit text{font-size:12.5px}
+.s-node:hover circle,.s-node.hot circle{stroke-width:2.8}
+.s-link{fill:none;stroke-width:1.5;stroke-opacity:.7}
+.s-link.dim{stroke-opacity:.12}
+.dseg{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-left:auto}
+.dseg span{font-size:12px;color:var(--muted);padding:3px 8px}
+.dseg button{border:0;border-left:1px solid var(--line);background:var(--surface);color:var(--ink);padding:3px 9px;font-size:12px}
+.dseg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.sugg .all{color:var(--accent);font-weight:600;font-size:13px}
 .walker{fill:var(--accent)}
 .side{display:flex;flex-direction:column;gap:14px}
 .side .panel{padding:16px}
@@ -320,7 +347,7 @@ form.cmt-form .row input{flex:1;min-width:0}
 @media (max-width:860px){
   body{padding-inline:16px}
   .top{margin-inline:-16px;padding-inline:16px}
-  .book-grid,.space-grid,.eval-grid,.my-grid,.below{grid-template-columns:1fr}
+  .book-grid,.space-grid,.eval-grid,.my-grid,.below,.search-grid{grid-template-columns:1fr}
   .pair{grid-template-columns:1fr}
   .pair .mid .arrow{transform:rotate(90deg)}
   .pickpair{grid-template-columns:1fr}
@@ -382,6 +409,7 @@ form.cmt-form .row input{flex:1;min-width:0}
             <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="currentColor" stroke-width="1.6"/></svg>向きのない関係（同じ問い・異なる答え・類似事例・矛盾・補完）</span>
             <span>本をクリックすると、その線を辿って移動します</span>
           </div>
+          <p class="capnote" id="egoCap" hidden></p>
         </div>
         <div class="rels" id="rels"></div>
       </div>
@@ -393,6 +421,35 @@ form.cmt-form .row input{flex:1;min-width:0}
         <div class="panel trailbox">
           <p class="eyebrow">この本を通った、ほかの人の軌跡</p>
           <div id="others"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEARCH RESULTS -->
+    <section id="v-search" hidden>
+      <p class="eyebrow">検索結果</p>
+      <h2 id="sTitle"></h2>
+      <p class="lead" id="sLead" style="margin:0 0 14px"></p>
+      <div class="search-grid">
+        <div class="side">
+          <div class="panel sctl">
+            <div class="row">
+              <label for="sTop">検索結果の上位<select id="sTop"><option>3</option><option>5</option><option>10</option><option>20</option></select></label>
+              <label for="sDepth">表示する深さ<select id="sDepth"><option value="0">0（当てはまった本だけ）</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+            </div>
+            <p style="margin:0;font-size:12px;color:var(--muted)">深さは、当てはまった本から関係を何本辿るか。表示は30冊までです。</p>
+          </div>
+          <div class="panel" style="padding:12px 16px"><ol class="sres" id="sres"></ol></div>
+        </div>
+        <div class="panel ego-wrap">
+          <div class="filters" id="sfilters"></div>
+          <div class="svgbox"><svg id="sgraph" viewBox="0 0 900 600" role="img" aria-label="検索結果の本と、関係で辿れる本のネットワーク"></svg></div>
+          <div class="legend-line">
+            <span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="var(--accent)"/></svg>検索に当てはまった本</span>
+            <span><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>関係を辿って加わった本（薄いほど遠い）</span>
+            <span>本をクリックすると、その本を中心にしたグラフへ移動します</span>
+          </div>
+          <p class="capnote" id="sCap" hidden></p>
         </div>
       </div>
     </section>
@@ -694,7 +751,8 @@ const S={view:"book",center:START,fams:new Set(FAM_ORDER),cross:false,
   trail:[...(SAVED?.trail||[]),START].slice(-12),
   read:new Set(SAVED?.read||["jacobs","lynch","oldenburg"]),mine:new Set(SAVED?.mine||["e7","s11","s20","e13"]),seed:new Set(["e7","s11","s20","e13"]),
   myVote:SAVED?.myVote||{},fixes:SAVED?.fixes||{},log:SAVED?.log||[],hist:SAVED?.hist||["jacobs"],
-  mode:"type",replay:null,fixOpen:false,evA:"",evB:"",evDraft:null};
+  mode:"type",replay:null,fixOpen:false,evA:"",evB:"",evDraft:null,
+  egoDepth:"auto",sq:"",sTop:5,sDepth:1,prevView:"book"};
 // 自分で追加した関係を復元し、自分の評価を数に反映する
 const addedEdge=r=>({...r,type:r.types[0],q:null,by:"あなた",agree:0,dis:0,trav:0});
 const ADDED=SAVED?.added||[];
@@ -727,12 +785,13 @@ function typeChips(e){return e.types.map(typeChip).join("")}
 function show(view){
   S.view=view;
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.view===view));
-  ["book","questions","space","eval","mine"].forEach(v=>$("#v-"+v).hidden=v!==view);
+  ["book","search","questions","space","eval","mine"].forEach(v=>$("#v-"+v).hidden=v!==view);
   render();
   window.scrollTo({top:0});
 }
 function goBook(id,viaEdge){
   if(viaEdge){viaEdge.trav++}
+  if(S.view==="search")S.egoDepth="auto"; // 検索結果から来たときは、表示数に合う深さを自動で選ぶ
   if(S.center!==id){S.trail.push(id);if(S.trail.length>12)S.trail.shift()}
   S.center=id;show("book");
 }
@@ -748,27 +807,47 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 $("#issueToggle").addEventListener("click",e=>{const on=document.body.classList.toggle("issues");e.currentTarget.setAttribute("aria-pressed",on)});
 
 /* ---------- search ---------- */
+// スペース区切りの語はすべて含む本だけ（AND）。一致した場所の重みは 書名 > 著者 > 分野・分類
+function searchBooks(v){
+  const terms=v.trim().split(/[\s　]+/).filter(Boolean);
+  if(!terms.length)return [];
+  return BOOKS.map(b=>{
+    const where=[[b.title,3,"書名"],[b.author,2,"著者"],[b.field+CLASS_NAME[b.cls],1,"分野"]];
+    let score=0;const hit=new Set();
+    for(const t of terms){const w=where.find(([x])=>x.includes(t));if(!w)return null;score+=w[1];hit.add(w[2])}
+    return {b,score,hit:[...hit]};
+  }).filter(Boolean).sort((x,y)=>y.score-x.score||edgesOf(y.b.id).length-edgesOf(x.b.id).length);
+}
+function openSearch(v){
+  if(S.view!=="search")S.prevView=S.view;
+  S.sq=v.trim();show("search");
+}
 (function(){
   const q=$("#q"),box=$("#sugg");let idx=0,res=[];
   const hist=S.hist;
+  function row(b,i,sub){return `<button class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${sub}</span></button>`}
   function draw(){
     const v=q.value.trim();
     if(!v){
-      res=hist.map(id=>B[id]);
+      res=hist.map(id=>({b:B[id]}));
       if(!res.length||document.activeElement!==q){box.hidden=true;return}
       idx=Math.min(idx,res.length-1);
       box.innerHTML=`<div style="padding:8px 12px 4px;color:var(--faint);font-size:11.5px">最近の検索</div>`
-        +res.map((b,i)=>`<button class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${esc(b.author)}・${esc(b.field)}</span></button>`).join("");
+        +res.map((x,i)=>row(x.b,i,`${esc(x.b.author)}・${esc(x.b.field)}`)).join("");
       box.hidden=false;return;
     }
-    res=BOOKS.filter(b=>(b.title+b.author+b.field+CLASS_NAME[b.cls]).includes(v)).slice(0,8);
-    if(!res.length){box.innerHTML=`<div style="padding:10px 12px;color:var(--muted);font-size:13px">「${esc(v)}」に一致する本はありません。書名の一部や著者名で試してください。</div>`;box.hidden=false;return}
+    const all=searchBooks(v);
+    if(!all.length){res=[];box.innerHTML=`<div style="padding:10px 12px;color:var(--muted);font-size:13px">「${esc(v)}」に一致する本はありません。語を減らすか、書名の一部や著者名で試してください。</div>`;box.hidden=false;return}
+    res=[{all:true,n:all.length},...all.slice(0,8)];
     idx=Math.min(idx,res.length-1);
-    box.innerHTML=res.map((b,i)=>`<button class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${esc(b.author)}・${esc(b.field)}・関係${edgesOf(b.id).length}本</span></button>`).join("");
+    box.innerHTML=res.map((x,i)=>x.all
+      ?`<button class="${i===idx?"on":""}" data-i="${i}"><span class="all">「${esc(v)}」に当てはまる${x.n}冊をグラフで見る</span><span class="a">Enter</span></button>`
+      :row(x.b,i,`${esc(x.b.author)}・${esc(x.b.field)}・関係${edgesOf(x.b.id).length}本`)).join("");
     box.hidden=false;
   }
-  function pick(b){
-    const i=hist.indexOf(b.id);if(i>=0)hist.splice(i,1);
+  function pick(x){
+    if(x.all){const v=q.value;q.value="";box.hidden=true;q.blur();openSearch(v);return}
+    const b=x.b,i=hist.indexOf(b.id);if(i>=0)hist.splice(i,1);
     hist.unshift(b.id);if(hist.length>6)hist.pop();
     q.value="";box.hidden=true;q.blur();goBook(b.id);
   }
@@ -783,6 +862,89 @@ $("#issueToggle").addEventListener("click",e=>{const on=document.body.classList.
   box.addEventListener("click",e=>{const b=e.target.closest("button[data-i]");if(b)pick(res[+b.dataset.i])});
   document.addEventListener("click",e=>{if(!e.target.closest(".search"))box.hidden=true});
 })();
+
+/* ---------- neighborhood（深さと上限つきの幅優先探索） ---------- */
+const SEARCH_CAP=30,EGO_CAP=20;
+// seeds から depth 本まで関係を辿る。cap 冊に達したら、辿られた回数の多い線の先を優先して残す
+function neighborhood(seeds,depth,cap,edgeOK=()=>true){
+  const dist=new Map(),parent=new Map();seeds.forEach(id=>dist.set(id,0));
+  let frontier=[...seeds],hidden=0;
+  for(let d=1;d<=depth&&frontier.length;d++){
+    const cand=new Map();
+    frontier.forEach(id=>edgesOf(id).filter(edgeOK).forEach(e=>{
+      const o=other(e,id);if(dist.has(o))return;
+      const c=cand.get(o);if(!c||e.trav>c.w)cand.set(o,{w:e.trav,p:id});
+    }));
+    const sorted=[...cand].sort((a,b)=>b[1].w-a[1].w),take=sorted.slice(0,Math.max(0,cap-dist.size));
+    hidden+=sorted.length-take.length;
+    take.forEach(([o,c])=>{dist.set(o,d);parent.set(o,c.p)});
+    frontier=take.map(x=>x[0]);
+  }
+  return {dist,parent,hidden};
+}
+// 中心の本から、EGO_CAP 冊に収まるいちばん深い深さ（最低1）
+function autoDepth(id){
+  let best=1;
+  for(let d=2;d<=3;d++){if(neighborhood([id],d,Infinity).dist.size-1<=EGO_CAP)best=d;else break}
+  return best;
+}
+const egoDepth=()=>S.egoDepth==="auto"?autoDepth(S.center):+S.egoDepth;
+const famOK=e=>e.types.some(t=>S.fams.has(TYPES[t].fam));
+// 力学配置の結果を viewBox に収める
+function fitNodes(nodes,W,H,pad){
+  const xs=nodes.map(n=>n.x),ys=nodes.map(n=>n.y),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const k=Math.min(1.4,(W-2*pad)/Math.max(x1-x0,1),(H-2*pad)/Math.max(y1-y0,1));
+  nodes.forEach(n=>{n.x=W/2+(n.x-(x0+x1)/2)*k;n.y=H/2+(n.y-(y0+y1)/2)*k});
+}
+
+/* ---------- SEARCH view ---------- */
+function famFilterHTML(cnt){
+  return FAM_ORDER.map(f=>`<button class="fbtn" data-f="${f}" aria-pressed="${S.fams.has(f)}"><i class="dot" style="background:var(--${f})"></i>${FAMS[f]}${cnt?` <span class="mono">${cnt[f]||0}</span>`:""}</button>`).join("");
+}
+function renderSearch(){
+  $("#sTop").value=S.sTop;$("#sDepth").value=S.sDepth;
+  const all=searchBooks(S.sq),top=all.slice(0,S.sTop);
+  $("#sTitle").textContent=`「${S.sq}」の検索結果`;
+  $("#sLead").innerHTML=`${all.length}冊が当てはまりました${all.length>S.sTop?`（上位${S.sTop}冊を表示）`:""}。スペースで区切った語は、すべてを含む本に絞ります。　<button class="booklink" id="sBack" type="button" style="font-family:inherit;font-weight:400">検索を閉じる</button>`;
+  $("#sBack").onclick=()=>show(S.prevView||"book");
+  $("#sres").innerHTML=top.length?top.map((x,i)=>`<li><span class="rk">${i+1}</span><span>${link(x.b.id)}</span><span class="m">${esc(x.b.author)}・${esc(x.b.field)}　一致：${x.hit.join("・")}</span></li>`).join("")
+    +(all.length>S.sTop?`<li style="display:block"><span class="more">ほかに${all.length-S.sTop}冊。上位の件数を増やすと表示されます。</span></li>`:"")
+    :`<li style="display:block"><span class="more">当てはまる本はありません。語を減らすか、別の語で試してください。</span></li>`;
+  $("#sfilters").innerHTML=famFilterHTML();
+  $("#sfilters").querySelectorAll("[data-f]").forEach(el=>el.onclick=()=>{const f=el.dataset.f;S.fams.has(f)?S.fams.delete(f):S.fams.add(f);renderSearch()});
+  const {dist,hidden}=neighborhood(top.map(x=>x.b.id),S.sDepth,SEARCH_CAP,famOK);
+  const cap=$("#sCap");cap.hidden=!hidden;
+  cap.textContent=hidden?`表示の上限${SEARCH_CAP}冊に達したため、ほかに辿れる${hidden}冊以上を省略しました。深さを下げるか、上位の件数を減らしてください。`:"";
+  drawSearchGraph(dist);
+}
+function drawSearchGraph(dist){
+  const svg=d3.select("#sgraph");svg.selectAll("*").remove();
+  const W=900,H=600;
+  if(!dist.size){svg.append("text").attr("x",W/2).attr("y",H/2).attr("text-anchor","middle").attr("fill","var(--muted)").text("表示する本がありません");return}
+  const set=new Set(dist.keys()),nodes=[...set].map(id=>({id,b:B[id],d:dist.get(id)}));
+  const links=EDGES.filter(e=>set.has(e.from)&&set.has(e.to)&&famOK(e)).map(e=>({source:e.from,target:e.to,e}));
+  const sim=d3.forceSimulation(nodes).force("link",d3.forceLink(links).id(d=>d.id).distance(95).strength(.4))
+    .force("charge",d3.forceManyBody().strength(-340)).force("x",d3.forceX(W/2).strength(.06)).force("y",d3.forceY(H/2).strength(.09))
+    .force("collide",d3.forceCollide(36)).stop();
+  for(let i=0;i<300;i++)sim.tick();
+  fitNodes(nodes,W,H,70);
+  const root=svg.append("g");
+  svg.call(d3.zoom().scaleExtent([.6,3]).on("zoom",ev=>root.attr("transform",ev.transform)));
+  const lk=root.append("g").selectAll("line").data(links).join("line").attr("class",d=>"s-link e-"+fam(d.e))
+    .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+  lk.append("title").text(d=>`${disp(B[d.e.from])} ${typeLabel(d.e)} ${disp(B[d.e.to])}`);
+  const op=[1,.95,.72,.55];
+  const nd=root.append("g").selectAll("g").data(nodes).join("g").attr("class",d=>"s-node"+(d.d===0?" hit":"")).attr("transform",d=>`translate(${d.x},${d.y})`)
+    .attr("opacity",d=>op[d.d]).attr("tabindex",0).attr("role","button").attr("aria-label",d=>disp(d.b)+"を中心に見る");
+  nd.append("circle").attr("r",d=>d.d===0?9:6);
+  nd.append("text").attr("text-anchor","middle").attr("y",d=>d.d===0?-14:-11).text(d=>d.b.title.length>12?d.b.title.slice(0,12)+"…":d.b.title);
+  nd.append("title").text(d=>`${disp(d.b)}　${d.b.author}${d.d?`（検索結果から${d.d}本先）`:""}`);
+  const go=(ev,d)=>goBook(d.id);
+  nd.on("click",go).on("keydown",(ev,d)=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();go(ev,d)}})
+    .on("mouseenter",(ev,d)=>lk.classed("dim",l=>l.e.from!==d.id&&l.e.to!==d.id)).on("mouseleave",()=>lk.classed("dim",false));
+}
+$("#sTop").onchange=ev=>{S.sTop=+ev.target.value;renderSearch()};
+$("#sDepth").onchange=ev=>{S.sDepth=+ev.target.value;renderSearch()};
 
 /* ---------- BOOK view ---------- */
 function renderBook(){
@@ -810,7 +972,9 @@ function renderBook(){
   // filters
   const cnt={};rels.forEach(e=>new Set(e.types.map(t=>TYPES[t].fam)).forEach(f=>cnt[f]=(cnt[f]||0)+1));
   $("#filters").innerHTML=FAM_ORDER.map(f=>`<button class="fbtn" data-f="${f}" aria-pressed="${S.fams.has(f)}"><i class="dot" style="background:var(--${f})"></i>${FAMS[f]} <span class="mono">${cnt[f]||0}</span></button>`).join("")
-    +`<span class="sep"></span><button class="fbtn x" id="crossBtn" aria-pressed="${S.cross}">別の分野からだけ</button>`;
+    +`<span class="sep"></span><button class="fbtn x" id="crossBtn" aria-pressed="${S.cross}">別の分野からだけ</button>`
+    +`<span class="dseg" role="group" aria-label="表示する深さ"><span>深さ</span>${["auto","1","2","3"].map(d=>`<button type="button" data-dep="${d}" aria-pressed="${String(S.egoDepth)===d}">${d==="auto"?`自動（${autoDepth(b.id)}）`:d}</button>`).join("")}</span>`;
+  $("#filters").querySelectorAll("[data-dep]").forEach(el=>el.onclick=()=>{S.egoDepth=el.dataset.dep;renderBook()});
   $("#filters").querySelectorAll("[data-f]").forEach(el=>el.onclick=()=>{const f=el.dataset.f;S.fams.has(f)?S.fams.delete(f):S.fams.add(f);renderBook()});
   $("#crossBtn").onclick=()=>{S.cross=!S.cross;renderBook()};
 
@@ -831,7 +995,10 @@ function hot(id,on){
   document.querySelectorAll(`#ego .nb[data-id="${id}"], #ego .eg[data-id="${id}"], #rels .rel[data-n="${id}"]`).forEach(el=>el.classList.toggle("hot",on));
 }
 function drawEgo(){
-  const svg=d3.select("#ego");svg.selectAll("*").remove();
+  const dep=egoDepth();
+  if(dep>1)return drawEgoDeep(dep);
+  $("#egoCap").hidden=true;
+  const svg=d3.select("#ego").attr("viewBox","0 0 760 520");svg.selectAll("*").remove();
   const W=760,H=520,cx=W/2,cy=H/2,rx=268,ry=190,c=S.center,cb=B[c];
   const defs=svg.append("defs");
   FAM_ORDER.forEach(f=>defs.append("marker").attr("id","m-"+f).attr("viewBox","0 0 10 10").attr("refX",9).attr("refY",5)
@@ -874,6 +1041,54 @@ function drawEgo(){
      .on("mouseenter",()=>hot(nd.id,true)).on("mouseleave",()=>hot(nd.id,false));
   });
   const cg=svg.append("g").attr("class","n-center").attr("transform",`translate(${cx},${cy})`);
+  cg.append("rect").attr("class","n-box").attr("x",-cw/2).attr("y",-ch/2).attr("width",cw).attr("height",ch).attr("rx",5);
+  cg.append("text").attr("class","n-title").attr("text-anchor","middle").attr("y",-2).text(cb.title.length>16?cb.title.slice(0,16)+"…":cb.title);
+  cg.append("text").attr("class","n-auth").attr("text-anchor","middle").attr("y",17).text(cb.author+"・"+cb.year);
+}
+// 深さ2以上：中心からの距離ごとに同心円へ並べる
+function drawEgoDeep(dep){
+  const W=760,H=600,c=S.center,cb=B[c];
+  const svg=d3.select("#ego").attr("viewBox",`0 0 ${W} ${H}`);svg.selectAll("*").remove();
+  const {dist,parent,hidden}=neighborhood([c],dep,SEARCH_CAP);
+  const cap=$("#egoCap");cap.hidden=!hidden;
+  cap.textContent=hidden?`表示の上限${SEARCH_CAP}冊に達したため、ほかに${hidden}冊以上を省略しました。深さを下げると見やすくなります。`:"";
+  // 周ごとに、親の角度の順に並べて全周へ均等に割り振る（楕円で横長の枠を使い切る）
+  const rx=d=>150+(d-1)*180/(dep-1),ry=d=>115+(d-1)*150/(dep-1),set=new Set(dist.keys()),ang=new Map([[c,0]]),nodes=[{id:c,d:0,b:cb,x:W/2,y:H/2}];
+  for(let d=1;d<=dep;d++){
+    const ring=[...dist].filter(([,x])=>x===d).map(([id])=>id)
+      .sort((a,b)=>(ang.get(parent.get(a))-ang.get(parent.get(b)))||a.localeCompare(b));
+    const off=d===1?0:Math.PI/ring.length*(d%2?0:.5);
+    ring.forEach((id,i)=>{const a=-Math.PI/2+off+(i+.5)*2*Math.PI/ring.length;ang.set(id,((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI));
+      nodes.push({id,d,b:B[id],x:W/2+rx(d)*Math.cos(a),y:H/2+ry(d)*Math.sin(a)})});
+  }
+  const pos=new Map(nodes.map(n=>[n.id,n]));
+  const links=EDGES.filter(e=>set.has(e.from)&&set.has(e.to)).map(e=>({source:pos.get(e.from),target:pos.get(e.to),e}));
+  const g=svg.append("g");
+  links.forEach(l=>{
+    const e=l.e,touch=e.from===c||e.to===c,ok=touch?visible(e):famOK(e),f=fam(e);
+    g.append("line").attr("class","s-link e-"+f+(ok?"":" dim")).attr("x1",l.source.x).attr("y1",l.source.y).attr("x2",l.target.x).attr("y2",l.target.y)
+      .attr("stroke-width",touch?2:1.3).append("title").text(`${disp(B[e.from])} ${typeLabel(e)} ${disp(B[e.to])}`);
+    if(touch&&ok){
+      const lab=typeLabel(e),lw=lab.length*11+14,o=l.source.id===c?l.target:l.source;
+      const lg=g.append("g").attr("class","e-lab "+f).attr("transform",`translate(${W/2+(o.x-W/2)*.55},${H/2+(o.y-H/2)*.55})`);
+      lg.append("rect").attr("x",-lw/2).attr("y",-10).attr("width",lw).attr("height",20).attr("rx",3);
+      lg.append("text").attr("text-anchor","middle").attr("dy",4).text(lab);
+    }
+  });
+  const op=[1,1,.75,.58];
+  nodes.filter(n=>n.d>0).forEach(n=>{
+    const vis=n.d>1||edgesOf(c).some(e=>other(e,c)===n.id&&visible(e));
+    const ng=svg.append("g").attr("class","nb s-node"+(vis?"":" dim")).attr("data-id",n.id).attr("transform",`translate(${n.x},${n.y})`)
+      .attr("opacity",vis?op[n.d]:.28).attr("tabindex",0).attr("role","button").attr("aria-label",disp(n.b)+"へ移動");
+    ng.append("circle").attr("r",n.d===1?8:5.5);
+    ng.append("text").attr("text-anchor","middle").attr("y",-12).text(n.b.title.length>11?n.b.title.slice(0,11)+"…":n.b.title);
+    ng.append("title").text(`${disp(n.b)}　${n.b.author}（この本から${n.d}本先）`);
+    const go=()=>goBook(n.id,n.d===1?findEdge(c,n.id):null);
+    ng.on("click",go).on("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();go()}})
+      .on("mouseenter",()=>hot(n.id,true)).on("mouseleave",()=>hot(n.id,false));
+  });
+  const cw=Math.min(cb.title.length*16+36,280),ch=56;
+  const cg=svg.append("g").attr("class","n-center").attr("transform",`translate(${W/2},${H/2})`);
   cg.append("rect").attr("class","n-box").attr("x",-cw/2).attr("y",-ch/2).attr("width",cw).attr("height",ch).attr("rx",5);
   cg.append("text").attr("class","n-title").attr("text-anchor","middle").attr("y",-2).text(cb.title.length>16?cb.title.slice(0,16)+"…":cb.title);
   cg.append("text").attr("class","n-auth").attr("text-anchor","middle").attr("y",17).text(cb.author+"・"+cb.year);
@@ -1348,6 +1563,7 @@ function updateCounts(){
 }
 function render(){
   if(S.view==="book")renderBook();
+  else if(S.view==="search")renderSearch();
   else if(S.view==="questions")renderQuestions();
   else if(S.view==="space")drawGlobal();
   else if(S.view==="eval")renderEval();
