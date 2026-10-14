@@ -14,7 +14,7 @@
   --accent:#2B6C70; --accent-ink:#FFFFFF; --accent-soft:#DCEBEA;
   --opp:#B3472D; --inh:#3561A6; --par:#56853A; --com:#9C761C;
   --opp-soft:#F6E3DC; --inh-soft:#E0E8F5; --par-soft:#E3EEDB; --com-soft:#F3EAD3;
-  --cls-lab-op:.1; --issue:#7A4FA0; --issue-soft:#EFE7F6;
+  --cls-lab-op:.1;
   --f-disp:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-ui:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -27,7 +27,6 @@
     --accent:#6DB5B8; --accent-ink:#0E1415; --accent-soft:#1F3435;
     --opp:#E4826A; --inh:#82A7E6; --par:#94C274; --com:#D8B45E;
     --opp-soft:#3A2521; --inh-soft:#1F2A3E; --par-soft:#243423; --com-soft:#3A3120;
-    --issue:#C3A0E4; --issue-soft:#2E2438;
   }
 }
 :root[data-theme="dark"]{
@@ -36,7 +35,6 @@
   --accent:#6DB5B8; --accent-ink:#0E1415; --accent-soft:#1F3435;
   --opp:#E4826A; --inh:#82A7E6; --par:#94C274; --com:#D8B45E;
   --opp-soft:#3A2521; --inh-soft:#1F2A3E; --par-soft:#243423; --com-soft:#3A3120;
-  --issue:#C3A0E4; --issue-soft:#2E2438;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.65;padding-inline:20px;padding-block:0 48px}
@@ -101,10 +99,6 @@ h3{font-size:14px;margin:0 0 8px;font-weight:600}
 .booklink{border:0;background:none;padding:0;font-family:var(--f-disp);font-weight:700;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .booklink:hover{text-decoration-color:var(--ink)}
 
-/* issue notes */
-.issue{display:none;border:1px dashed var(--issue);background:var(--issue-soft);color:var(--ink);border-radius:var(--r);padding:10px 12px;font-size:12.5px;line-height:1.6}
-.issue b{color:var(--issue);display:block;font-size:11px;letter-spacing:.08em;margin-bottom:2px}
-body.issues .issue{display:block}
 
 /* book view */
 .book-grid{display:grid;grid-template-columns:280px minmax(0,1fr) 360px;gap:20px;align-items:start}
@@ -402,7 +396,6 @@ form.cmt-form .row input{flex:1;min-width:0}
               </div>
             </form>
           </section>
-          <div class="issue"><b>論点 ― 既存システムとの違い</b>OPACやCiNiiは書誌情報の一致で探し、LibraryThingはタグや利用者の蔵書の重なりから推薦する。ここでは「批判」「異なる答え」といった<strong>関係の種類</strong>が探索の軸になる。この差が本当に新しい出会いを生むかが検証点。</div>
         </div>
         <div class="panel ego-wrap">
           <div class="filters" id="filters"></div>
@@ -490,7 +483,6 @@ form.cmt-form .row input{flex:1;min-width:0}
             <p style="margin:0 0 10px;font-size:12.5px;color:var(--muted)">誰かが辿った道筋を、空間の上でなぞります。</p>
             <div class="tlist" id="tlist"></div>
           </div>
-          <div class="issue"><b>論点 ― 利用者の関与は足りるか</b>1本の関係を「同意5件」で確定とすると、1万本の関係には5万件の評価が必要になる。東大だけで回るのか、大学間連携や社会全体に開くのか。軌跡が見えること自体が参加の動機になるかも検証したい。</div>
         </div>
       </div>
     </section>
@@ -510,7 +502,6 @@ form.cmt-form .row input{flex:1;min-width:0}
             <label for="evB">本B<div class="bpick float" id="pickEB"><input id="evB" type="search" placeholder="書名・著者・分野で探す" autocomplete="off"><div class="sugg" hidden></div></div></label>
           </div>
           <article class="panel card" id="card"></article>
-          <div class="issue"><b>論点 ― AIがベースのネットワークを作れるか</b>32冊でも組み合わせは496通り。蔵書100万冊では約5×10<sup>11</sup>通りになり、全ペアの判定は現実的でない。書誌・目次・引用関係で候補を絞った上でAIが関係の種類を判定する、という二段構えが要る。本文のデジタル化と権利処理も前提になる。</div>
         </div>
         <div class="side">
           <div class="panel">
@@ -524,7 +515,6 @@ form.cmt-form .row input{flex:1;min-width:0}
               <li>状態（確定・検証中・議論中）を押すと、評価の履歴が見られる</li>
             </ol>
           </div>
-          <div class="issue"><b>論点 ― 質をどう担保するか</b>ピアレビュー（同意数）・AIレビュー（出典照合）・議論の枠組み（Wikipediaのノートに当たる欄）の三層で足りるか。確定のしきい値を分野の規模でどう変えるか。</div>
         </div>
       </div>
     </section>
@@ -553,7 +543,6 @@ form.cmt-form .row input{flex:1;min-width:0}
             <p style="margin:0 0 10px;font-size:12.5px;color:var(--muted)">評価・追加した関係・読んだ本・軌跡・検索履歴は、このブラウザに保存されます。</p>
             <button class="btn small" id="resetState" type="button">記録を消す</button>
           </div>
-          <div class="issue"><b>論点 ― インセンティブの設計</b>評価するほど自分の空間が育ち、外縁から新しい本が届く。この個人的な見返りだけで評価は続くか。空間を公開し、他の人が辿れるようにするかどうか。</div>
         </div>
       </div>
     </section>
@@ -798,8 +787,6 @@ document.addEventListener("click",ev=>{
   if(c)c.closest("dialog").close();
 });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.view)));
-// 論点の注記は通常は隠す。説明資料のスクリーンショット用に、URL に ?issues を付けると表示する
-if(/[?&#]issues\b/.test(location.search+location.hash))document.body.classList.add("issues");
 
 /* ---------- search ---------- */
 // スペース区切りの語はすべて含む本だけ（AND）。一致した場所の重みは 書名 > 著者 > 分野・分類
