@@ -1108,7 +1108,7 @@ function drawEgoDeep(dep){
   const cap=$("#egoCap");cap.hidden=!hidden;
   cap.textContent=hidden?`表示の上限${SEARCH_CAP}冊に達したため、ほかに${hidden}冊以上を省略しました。深さを下げると見やすくなります。`:"";
   // 周ごとに、親の角度の順に並べて全周へ均等に割り振る（楕円で横長の枠を使い切る）
-  const rx=d=>150+(d-1)*180/(dep-1),ry=d=>115+(d-1)*150/(dep-1),set=new Set(dist.keys()),ang=new Map([[c,0]]),nodes=[{id:c,d:0,b:cb,x:W/2,y:H/2}];
+  const rx=d=>200+(d-1)*100/(dep-1),ry=d=>160+(d-1)*105/(dep-1),set=new Set(dist.keys()),ang=new Map([[c,0]]),nodes=[{id:c,d:0,b:cb,x:W/2,y:H/2}];
   for(let d=1;d<=dep;d++){
     const ring=[...dist].filter(([,x])=>x===d).map(([id])=>id)
       .sort((a,b)=>(ang.get(parent.get(a))-ang.get(parent.get(b)))||a.localeCompare(b));
@@ -1118,20 +1118,29 @@ function drawEgoDeep(dep){
   }
   const pos=new Map(nodes.map(n=>[n.id,n]));
   const links=EDGES.filter(e=>set.has(e.from)&&set.has(e.to)).map(e=>({source:pos.get(e.from),target:pos.get(e.to),e}));
-  const g=svg.append("g");
+  const g=svg.append("g"),labs=[],cbw=Math.min(cb.title.length*16+36,280),cbh=56;
   links.forEach(l=>{
-    const e=l.e,touch=e.from===c||e.to===c,ok=touch?visible(e):famOK(e),f=fam(e);
+    // 中心から外へ辿る道（幅優先の木）にない線は薄くして、線の交差で文字が埋もれないようにする
+    const e=l.e,touch=e.from===c||e.to===c,tree=parent.get(l.target.id)===l.source.id||parent.get(l.source.id)===l.target.id,ok=(touch?visible(e):famOK(e))&&(touch||tree),f=fam(e);
     g.append("line").attr("class","s-link e-"+f+(ok?"":" dim")).attr("x1",l.source.x).attr("y1",l.source.y).attr("x2",l.target.x).attr("y2",l.target.y)
       .attr("stroke-width",touch?2:1.3);
     g.append("line").attr("class","hit").attr("data-tip-edge",e.id).attr("x1",l.source.x).attr("y1",l.source.y).attr("x2",l.target.x).attr("y2",l.target.y);
     if(touch&&ok){
+      // ラベルは中心の箱の外側、箱と相手の本のあいだに置く
       const lab=typeLabel(e),lw=lab.length*11+14,o=l.source.id===c?l.target:l.source;
-      const lg=g.append("g").attr("class","e-lab "+f).attr("data-tip-edge",e.id).attr("transform",`translate(${W/2+(o.x-W/2)*.55},${H/2+(o.y-H/2)*.55})`);
-      lg.append("rect").attr("x",-lw/2).attr("y",-10).attr("width",lw).attr("height",20).attr("rx",3);
-      lg.append("text").attr("text-anchor","middle").attr("dy",4).text(lab);
+      const dx=Math.abs(o.x-W/2)||1e-6,dy=Math.abs(o.y-H/2)||1e-6,len=Math.hypot(dx,dy);
+      const tOut=Math.min((cbw/2+lw/2+6)/dx,(cbh/2+16)/dy),tNode=1-16/len;
+      const t=Math.min(Math.max(tOut,(tOut+tNode)/2),tNode);
+      labs.push({e,f,lab,lw,x:W/2+(o.x-W/2)*t,y:H/2+(o.y-H/2)*t});
     }
   });
-  const op=[1,1,.75,.58];
+  // ラベルは線の上に重ねて描く
+  labs.forEach(x=>{
+    const lg=svg.append("g").attr("class","e-lab "+x.f).attr("data-tip-edge",x.e.id).attr("transform",`translate(${x.x},${x.y})`);
+    lg.append("rect").attr("x",-x.lw/2).attr("y",-10).attr("width",x.lw).attr("height",20).attr("rx",3);
+    lg.append("text").attr("text-anchor","middle").attr("dy",4).text(x.lab);
+  });
+  const op=[1,1,.85,.72];
   nodes.filter(n=>n.d>0).forEach(n=>{
     const vis=n.d>1||edgesOf(c).some(e=>other(e,c)===n.id&&visible(e));
     const ng=svg.append("g").attr("class","nb s-node"+(vis?"":" dim")).attr("data-id",n.id).attr("data-tip-node",n.id).attr("transform",`translate(${n.x},${n.y})`)
