@@ -364,7 +364,7 @@ form.cmt-form .row input{flex:1;min-width:0}
 @media (max-width:860px){
   body{padding-inline:16px}
   .top{margin-inline:-16px;padding-inline:16px}
-  .book-grid,.space-grid,.eval-grid,.my-grid,.below,.search-grid{grid-template-columns:1fr}
+  .book-grid,.space-grid,.eval-grid,.my-grid,.below,.search-grid{grid-template-columns:minmax(0,1fr)}
   .pair{grid-template-columns:1fr}
   .pair .mid .arrow{transform:rotate(90deg)}
   .pickpair{grid-template-columns:1fr}
@@ -548,11 +548,6 @@ form.cmt-form .row input{flex:1;min-width:0}
             </ol>
           </div>
           <div class="issue"><b>論点 ― 質をどう担保するか</b>ピアレビュー（同意数）・AIレビュー（出典照合）・議論の枠組み（Wikipediaのノートに当たる欄）の三層で足りるか。確定のしきい値を分野の規模でどう変えるか。</div>
-          <div class="panel">
-            <h3>関係を追加する</h3>
-            <p style="margin:0 0 10px;font-size:12.5px;color:var(--muted)">まだ線が引かれていない2冊のあいだに、新しい関係を提案します。</p>
-            <button class="btn" id="openAdd" type="button">関係を追加する</button>
-          </div>
         </div>
       </div>
     </section>
@@ -1305,7 +1300,6 @@ function initEval(){
   PICK_EA=bookPicker($("#pickEA"),{onPick:id=>{S.evA=id;changed()}});
   PICK_EB=bookPicker($("#pickEB"),{note:relNote,order:relFirst,onPick:id=>{S.evB=id;changed()}});
   $("#evSwap").onclick=()=>{[S.evA,S.evB]=[S.evB,S.evA];renderEval()};
-  $("#openAdd").onclick=()=>openAdd(S.evA,S.evB);
 }
 function renderEval(){
   PICK_EA.value=S.evA;PICK_EB.value=S.evB;
