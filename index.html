@@ -70,9 +70,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .evwhy textarea{min-height:64px;resize:vertical}
 ol.hist .b{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px}
 ol.hist blockquote{margin:2px 0 0;width:100%;font-size:12.5px;line-height:1.65;border-left:2px solid var(--line);padding:2px 0 2px 8px}
-.issue-toggle{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
-.issue-toggle[aria-pressed="true"]{border-color:var(--issue);color:var(--issue);background:var(--issue-soft)}
-.issue-toggle i{width:8px;height:8px;border-radius:50%;background:var(--issue);display:inline-block}
 nav.tabs{display:flex;gap:4px;max-width:1360px;margin:0 auto;overflow-x:auto}
 nav.tabs button{border:0;background:none;padding:8px 14px 10px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
 nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
@@ -253,15 +250,6 @@ line.hit{stroke:transparent;stroke-width:12;cursor:pointer}
 .keyrow span{display:flex;align-items:center;gap:8px}
 .keyrow .ln{width:22px;height:0;border-top:2.5px solid}
 
-/* questions */
-.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
-.q{padding:18px 20px;display:flex;flex-direction:column;gap:10px}
-.q h3{font-family:var(--f-disp);font-size:18px;font-weight:700;margin:0;text-wrap:balance}
-.q .books{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px}
-.q ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.q li{font-size:13px;display:flex;gap:8px;align-items:baseline}
-.q li .tchip{flex:none}
-.q .qfoot{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;display:flex;gap:12px}
 
 /* evaluate */
 .eval-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
@@ -370,7 +358,6 @@ form.cmt-form .row input{flex:1;min-width:0}
   .pickpair{grid-template-columns:1fr}
   .pickpair #evSwap{justify-self:start}
   .evwhy{grid-template-columns:1fr}
-  .qgrid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -389,7 +376,6 @@ form.cmt-form .row input{flex:1;min-width:0}
         <input id="q" type="search" placeholder="書名・著者・分野で探す（例：ジェイコブズ、郊外、文学）" autocomplete="off" aria-label="本を検索">
         <div class="sugg" id="sugg" hidden></div>
       </div>
-      <button class="issue-toggle" id="issueToggle" aria-pressed="false"><i></i>論点を重ねる</button>
     </div>
     <nav class="tabs" role="tablist" aria-label="画面">
       <button role="tab" data-view="book" aria-selected="true">新しい出会い</button>
@@ -474,15 +460,6 @@ form.cmt-form .row input{flex:1;min-width:0}
           <p class="capnote" id="sCap" hidden></p>
         </div>
       </div>
-    </section>
-
-    <!-- QUESTIONS -->
-    <section id="v-questions" hidden>
-      <p class="eyebrow">問いから探す</p>
-      <h2>書名がわからなくても、問いから入れる</h2>
-      <p class="lead">「同じ問い」「異なる答え」で結ばれた関係を問いごとに束ねました。分野の違う本が、ひとつの問いのもとに並びます。</p>
-      <div class="issue" style="margin-bottom:16px"><b>論点 ― 目的をどう説明するか</b>この入口は「知的生産の加速」（研究の問いから未知の文献へ）と「人と人の交流」（誰かが立てた問いに参加する）のどちらにより効くのか。問い自体を利用者が立てられるようにするかも分岐点。</div>
-      <div class="qgrid" id="qgrid"></div>
     </section>
 
     <!-- SPACE -->
@@ -802,7 +779,7 @@ function typeChips(e){return e.types.map(typeChip).join("")}
 function show(view){
   S.view=view;
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.view===view));
-  ["book","search","questions","space","eval","mine"].forEach(v=>$("#v-"+v).hidden=v!==view);
+  ["book","search","space","eval","mine"].forEach(v=>$("#v-"+v).hidden=v!==view);
   render();
   window.scrollTo({top:0});
 }
@@ -821,7 +798,8 @@ document.addEventListener("click",ev=>{
   if(c)c.closest("dialog").close();
 });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.view)));
-$("#issueToggle").addEventListener("click",e=>{const on=document.body.classList.toggle("issues");e.currentTarget.setAttribute("aria-pressed",on)});
+// 論点の注記は通常は隠す。説明資料のスクリーンショット用に、URL に ?issues を付けると表示する
+if(/[?&#]issues\b/.test(location.search+location.hash))document.body.classList.add("issues");
 
 /* ---------- search ---------- */
 // スペース区切りの語はすべて含む本だけ（AND）。一致した場所の重みは 書名 > 著者 > 分野・分類
@@ -1215,19 +1193,6 @@ $("#cmtForm").addEventListener("submit",ev=>{
   $("#cmtText").value="";renderComments();
   toast(ok?"コメントを投稿しました。":"コメントを投稿しました（このブラウザでは保存できないため、閉じると消えます）。");
 });
-
-/* ---------- QUESTIONS ---------- */
-function renderQuestions(){
-  $("#qgrid").innerHTML=Object.entries(QUESTIONS).map(([qid,qt])=>{
-    const es=EDGES.filter(e=>e.q===qid);
-    const ids=[...new Set(es.flatMap(e=>[e.from,e.to]))];
-    const cls=new Set(ids.map(i=>B[i].cls));
-    return `<article class="panel q"><p class="eyebrow" style="margin:0">問い</p><h3>${esc(qt)}</h3>
-      <div class="books">${ids.map(link).join("")}</div>
-      <ul>${es.map(e=>`<li>${typeChips(e)}<span>${esc(e.why)}</span></li>`).join("")}</ul>
-      <div class="qfoot"><span class="mono">${ids.length}冊</span><span class="mono">${cls.size}つの分類にまたがる</span><span class="mono">辿られた ${es.reduce((s,e)=>s+e.trav,0)}回</span></div></article>`;
-  }).join("");
-}
 
 /* ---------- SPACE (global) ---------- */
 let G=null,GN=0;
@@ -1667,7 +1632,6 @@ function updateCounts(){
 function render(){
   if(S.view==="book")renderBook();
   else if(S.view==="search")renderSearch();
-  else if(S.view==="questions")renderQuestions();
   else if(S.view==="space")drawGlobal();
   else if(S.view==="eval")renderEval();
   else if(S.view==="mine")renderMine();
