@@ -58,6 +58,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sugg button:hover,.sugg button.on{background:var(--surface-2)}
 .sugg .t{font-family:var(--f-disp);font-weight:700}
 .sugg .a{color:var(--muted);font-size:12px}
+.bpick input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+.bpick .sugg{position:static;margin-top:4px;max-height:220px;box-shadow:none}
+.bpick .sugg .dup{color:var(--opp);font-size:11.5px;margin-left:auto;white-space:nowrap}
 .issue-toggle{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
 .issue-toggle[aria-pressed="true"]{border-color:var(--issue);color:var(--issue);background:var(--issue-soft)}
 .issue-toggle i{width:8px;height:8px;border-radius:50%;background:var(--issue);display:inline-block}
@@ -502,9 +505,9 @@ form.cmt-form .row input{flex:1;min-width:0}
   <div class="dlg-in">
     <div class="dlg-hd"><h3 id="addTitle">関係を追加する</h3><button type="button" class="x" aria-label="閉じる" data-close>×</button></div>
     <form class="add" id="addForm">
-      <label for="addA">本A<select id="addA"></select></label>
+      <label for="addA">本A<div class="bpick" id="pickA"><input id="addA" type="search" placeholder="書名・著者・分野で探す" autocomplete="off"><div class="sugg" hidden></div></div></label>
       <div class="lab"><span>関係の種類（複数選択可）</span><div class="typeboxes" id="addT"></div><span class="hint">向きのある種類（批判・発展・具体化・抽象化・影響）は「本A → 本B」の向きになります。</span></div>
-      <label for="addB">本B<select id="addB"></select></label>
+      <label for="addB">本B<div class="bpick" id="pickB"><input id="addB" type="search" placeholder="書名・著者・分野で探す" autocomplete="off"><div class="sugg" hidden></div></div></label>
       <label for="addW">根拠（どの章の、どの主張か）<textarea id="addW" placeholder="例：第3章で、Bの〇〇という前提を△△の観点から退けている"></textarea></label>
       <div class="check" id="addCheck" hidden></div>
       <div class="row-end"><button type="button" class="btn" data-close>キャンセル</button><button class="btn primary" type="submit">関係を追加する</button></div>
@@ -1074,21 +1077,50 @@ function renderEval(){
     updateCounts();renderEval();
   };
 }
+let PICK_A,PICK_B;
 function openAdd(a,b){
-  $("#addA").value=a||"";$("#addB").value=b||"";$("#addW").value="";$("#addCheck").hidden=true;
+  PICK_A.value=a;PICK_B.value=b;$("#addW").value="";$("#addCheck").hidden=true;
   $("#addT").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
   $("#addDlg").showModal();
   (a&&b?$("#addT button"):a?$("#addB"):$("#addA")).focus();
 }
+/* 書名・著者・分野で絞り込める本の選択欄。note(id) は候補の右側に添える注記 */
+function bookPicker(root,note){
+  const q=root.querySelector("input"),box=root.querySelector(".sugg");let val="",idx=0,res=[];
+  const label=id=>id?`${disp(B[id])}　${B[id].author}`:"";
+  function draw(){
+    const v=q.value.trim(),all=!v||v===label(val);
+    res=all?BOOKS:BOOKS.filter(b=>(b.title+b.author+b.field+CLASS_NAME[b.cls]).includes(v));
+    if(!res.length){box.innerHTML=`<div style="padding:8px 12px;color:var(--muted);font-size:12.5px">「${esc(v)}」に一致する本はありません。</div>`;box.hidden=false;return}
+    idx=Math.min(idx,res.length-1);
+    box.innerHTML=res.map((b,i)=>{const n=note?note(b.id):"";
+      return `<button type="button" class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${esc(b.author)}・${esc(b.field)}</span>${n?`<span class="dup">${esc(n)}</span>`:""}</button>`}).join("");
+    box.hidden=false;
+    box.querySelector(".on")?.scrollIntoView({block:"nearest"});
+  }
+  function pick(id){val=id;q.value=label(id);box.hidden=true}
+  q.addEventListener("focus",()=>{q.select();idx=0;draw()});
+  q.addEventListener("input",()=>{idx=0;draw()});
+  q.addEventListener("blur",()=>{box.hidden=true;if(!q.value.trim())val="";q.value=label(val)});
+  q.addEventListener("keydown",e=>{
+    if(e.key==="ArrowDown"){idx=Math.min(idx+1,res.length-1);draw();e.preventDefault()}
+    else if(e.key==="ArrowUp"){idx=Math.max(idx-1,0);draw();e.preventDefault()}
+    else if(e.key==="Enter"){e.preventDefault();if(!box.hidden&&res[idx])pick(res[idx].id)}
+    else if(e.key==="Escape"&&!box.hidden){e.preventDefault();box.hidden=true}
+  });
+  box.addEventListener("mousedown",e=>e.preventDefault());
+  box.addEventListener("click",e=>{const b=e.target.closest("button[data-i]");if(b)pick(res[+b.dataset.i].id)});
+  return {get value(){return val},set value(id){val=id||"";q.value=label(val)}};
+}
 function initAddForm(){
-  const opts=`<option value="">本を選んでください</option>`+BOOKS.map(b=>`<option value="${b.id}">${esc(disp(b))}　${esc(b.author)}</option>`).join("");
-  $("#addA").innerHTML=opts;$("#addB").innerHTML=opts;
+  PICK_A=bookPicker($("#pickA"),id=>{const b=PICK_B.value,e=b&&b!==id&&findEdge(id,b);return e?`既に関係あり：${typeLabel(e)}`:""});
+  PICK_B=bookPicker($("#pickB"),id=>{const a=PICK_A.value,e=a&&a!==id&&findEdge(a,id);return e?`既に関係あり：${typeLabel(e)}`:""});
   $("#addT").innerHTML=Object.keys(TYPES).map(t=>`<button type="button" class="tchip fam-${TYPES[t].fam}" data-t="${t}" aria-pressed="false">${t}</button>`).join("");
   $("#addT").onclick=ev=>{const x=ev.target.closest("[data-t]");if(x)x.setAttribute("aria-pressed",x.getAttribute("aria-pressed")!=="true")};
   document.querySelectorAll("dialog.dlg").forEach(d=>d.addEventListener("click",ev=>{if(ev.target===d)d.close()}));
   $("#addForm").addEventListener("submit",ev=>{
     ev.preventDefault();
-    const a=$("#addA").value,b=$("#addB").value,w=$("#addW").value.trim(),ck=$("#addCheck");
+    const a=PICK_A.value,b=PICK_B.value,w=$("#addW").value.trim(),ck=$("#addCheck");
     const types=[...$("#addT").querySelectorAll('[aria-pressed="true"]')].map(x=>x.dataset.t);
     ck.hidden=false;ck.className="check bad";
     if(!a||!b){ck.textContent="本Aと本Bを選んでください。";return}
