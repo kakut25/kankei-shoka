@@ -60,7 +60,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sugg .a{color:var(--muted);font-size:12px}
 .bpick input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
 .bpick .sugg{position:static;margin-top:4px;max-height:220px;box-shadow:none}
-.bpick .sugg .dup{color:var(--opp);font-size:11.5px;margin-left:auto;white-space:nowrap}
+.bpick .sugg .nt{font-size:11.5px;margin-left:auto;white-space:nowrap;color:var(--accent)}
+.bpick .sugg .nt.dup{color:var(--opp)}
+.bpick.float{position:relative}
+.bpick.float .sugg{position:absolute;max-height:340px;box-shadow:0 8px 24px rgb(0 0 0 / .12);margin-top:0}
+.evwhy{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:10px}
+.evwhy label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.evwhy textarea,.evwhy select{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+.evwhy textarea{min-height:64px;resize:vertical}
+ol.hist .b{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px}
+ol.hist blockquote{margin:2px 0 0;width:100%;font-size:12.5px;line-height:1.65;border-left:2px solid var(--line);padding:2px 0 2px 8px}
 .issue-toggle{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
 .issue-toggle[aria-pressed="true"]{border-color:var(--issue);color:var(--issue);background:var(--issue-soft)}
 .issue-toggle i{width:8px;height:8px;border-radius:50%;background:var(--issue);display:inline-block}
@@ -316,6 +325,7 @@ form.cmt-form .row input{flex:1;min-width:0}
   .pair .mid .arrow{transform:rotate(90deg)}
   .pickpair{grid-template-columns:1fr}
   .pickpair #evSwap{justify-self:start}
+  .evwhy{grid-template-columns:1fr}
   .qgrid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -439,9 +449,9 @@ form.cmt-form .row input{flex:1;min-width:0}
             <p class="lead" style="margin:0">評価する関係は自分で選びます。同意した関係は「わたしの空間」に加わります。</p>
           </div>
           <div class="panel pickpair">
-            <label for="evA">本A<select id="evA"></select></label>
+            <label for="evA">本A<div class="bpick float" id="pickEA"><input id="evA" type="search" placeholder="書名・著者・分野で探す" autocomplete="off"><div class="sugg" hidden></div></div></label>
             <button class="btn small" id="evSwap" type="button" aria-label="本Aと本Bを入れ替える">⇄</button>
-            <label for="evB">本B<select id="evB"></select></label>
+            <label for="evB">本B<div class="bpick float" id="pickEB"><input id="evB" type="search" placeholder="書名・著者・分野で探す" autocomplete="off"><div class="sugg" hidden></div></div></label>
           </div>
           <article class="panel card" id="card"></article>
           <div class="issue"><b>論点 ― AIがベースのネットワークを作れるか</b>32冊でも組み合わせは496通り。蔵書100万冊では約5×10<sup>11</sup>通りになり、全ペアの判定は現実的でない。書誌・目次・引用関係で候補を絞った上でAIが関係の種類を判定する、という二段構えが要る。本文のデジタル化と権利処理も前提になる。</div>
@@ -684,7 +694,7 @@ const S={view:"book",center:START,fams:new Set(FAM_ORDER),cross:false,
   trail:[...(SAVED?.trail||[]),START].slice(-12),
   read:new Set(SAVED?.read||["jacobs","lynch","oldenburg"]),mine:new Set(SAVED?.mine||["e7","s11","s20","e13"]),seed:new Set(["e7","s11","s20","e13"]),
   myVote:SAVED?.myVote||{},fixes:SAVED?.fixes||{},log:SAVED?.log||[],hist:SAVED?.hist||["jacobs"],
-  mode:"type",replay:null,fixOpen:false,evA:"",evB:""};
+  mode:"type",replay:null,fixOpen:false,evA:"",evB:"",evDraft:null};
 // 自分で追加した関係を復元し、自分の評価を数に反映する
 const addedEdge=r=>({...r,type:r.types[0],q:null,by:"あなた",agree:0,dis:0,trav:0});
 const ADDED=SAVED?.added||[];
@@ -893,11 +903,11 @@ function relCard(e,c){
       ${v?`<span style="font-size:12px;color:var(--accent)">あなた：${v==="agree"?"同意":"違う"}</span>`:""}<button type="button" class="btn small" data-hist="${e.id}">履歴を見て評価</button></div>
   </article>`;
 }
-function vote(e,v){
+function vote(e,v,info={}){
   const prev=S.myVote[e.id],ts=Date.now();
   if(prev==="agree")e.agree--;if(prev==="disagree")e.dis--;
   if(prev===v){delete S.myVote[e.id];if(v==="agree")S.mine.delete(e.id);S.log.push({eid:e.id,act:"cancel",prev,ts});updateCounts();return}
-  S.myVote[e.id]=v;S.log.push({eid:e.id,act:v,prev:prev||null,ts});
+  S.myVote[e.id]=v;S.log.push({eid:e.id,act:v,prev:prev||null,ts,why:info.why||"",basis:info.basis||""});
   if(v==="agree"){e.agree++;S.mine.add(e.id)}else if(v==="disagree"){e.dis++;S.mine.delete(e.id)}
   updateCounts();
 }
@@ -1009,35 +1019,29 @@ $("#modeType").onclick=()=>{S.mode="type";drawGlobal()};
 $("#modeTrail").onclick=()=>{S.mode="trail";drawGlobal()};
 
 /* ---------- EVAL ---------- */
-function fillPairSelects(){
-  const opt=(b,sel,extra="")=>`<option value="${b.id}"${b.id===sel?" selected":""}>${esc(disp(b))}　${esc(b.author)}${extra}</option>`;
-  const ph=`<option value="">本を選んでください</option>`;
-  $("#evA").innerHTML=ph+BOOKS.map(b=>opt(b,S.evA)).join("");
-  let html=ph;
-  if(S.evA){
-    const rel=edgesOf(S.evA).map(e=>[other(e,S.evA),e]),ids=new Set(rel.map(x=>x[0]));
-    html+=`<optgroup label="本Aと関係がある本">${rel.map(([id,e])=>opt(B[id],S.evB,`（${typeLabel(e)}）`)).join("")}</optgroup>`
-      +`<optgroup label="そのほかの本">${BOOKS.filter(b=>b.id!==S.evA&&!ids.has(b.id)).map(b=>opt(b,S.evB)).join("")}</optgroup>`;
-  }else html+=BOOKS.map(b=>opt(b,S.evB)).join("");
-  $("#evB").innerHTML=html;
-}
+let PICK_EA,PICK_EB;
+const BASIS=["両方を通読","該当する章を確認","授業・ゼミで講読","解説・書評で確認","一方のみ読了"];
 function initEval(){
-  $("#evA").onchange=ev=>{S.evA=ev.target.value;S.fixOpen=false;renderEval()};
-  $("#evB").onchange=ev=>{S.evB=ev.target.value;S.fixOpen=false;renderEval()};
+  // 本Bは、本Aと関係がある本を先に並べる
+  const relNote=id=>{const a=S.evA,e=a&&a!==id&&findEdge(a,id);return e?{t:`関係あり：${typeLabel(e)}`}:null};
+  const relFirst=()=>{if(!S.evA)return BOOKS;const has=b=>b.id!==S.evA&&!!findEdge(S.evA,b.id);return [...BOOKS.filter(has),...BOOKS.filter(b=>!has(b)&&b.id!==S.evA)]};
+  const changed=()=>{S.fixOpen=false;S.evDraft=null;renderEval()};
+  PICK_EA=bookPicker($("#pickEA"),{onPick:id=>{S.evA=id;changed()}});
+  PICK_EB=bookPicker($("#pickEB"),{note:relNote,order:relFirst,onPick:id=>{S.evB=id;changed()}});
   $("#evSwap").onclick=()=>{[S.evA,S.evB]=[S.evB,S.evA];renderEval()};
   $("#openAdd").onclick=()=>openAdd(S.evA,S.evB);
 }
 function renderEval(){
-  fillPairSelects();
+  PICK_EA.value=S.evA;PICK_EB.value=S.evB;
   const a=S.evA,b=S.evB,card=$("#card");
-  if(!a||!b){card.innerHTML=`<p class="empty">評価したい関係の両端にある本を、2冊選んでください。本Bの一覧では、本Aと関係がある本が先に並びます。</p>`;return}
+  if(!a||!b){card.innerHTML=`<p class="empty">評価したい関係の両端にある本を、2冊選んでください。本Bの候補では、本Aと関係がある本が先に並びます。</p>`;return}
   if(a===b){card.innerHTML=`<p class="empty">本Aと本Bが同じです。別の本を選んでください。</p>`;return}
   const e=findEdge(a,b);
   if(!e){
     card.innerHTML=`<p class="empty">${esc(disp(B[a]))}と${esc(disp(B[b]))}のあいだには、まだ関係がありません。</p><div><button class="btn primary" id="addPair" type="button">この2冊の関係を追加する</button></div>`;
     $("#addPair").onclick=()=>openAdd(a,b);return;
   }
-  const fa=B[e.from],fb=B[e.to],dir=TYPES[e.type].dir,v=S.myVote[e.id],fx=S.fixes[e.id];
+  const fa=B[e.from],fb=B[e.to],dir=TYPES[e.type].dir,v=S.myVote[e.id],fx=S.fixes[e.id],dr=S.evDraft||{why:"",basis:""};
   const readHint=(S.read.has(fa.id)||S.read.has(fb.id))?`<span class="pill" style="border-color:var(--accent);color:var(--accent)">あなたが読んだ本を含む</span>`:"";
   card.innerHTML=`
     <div class="rel-top">${typeChips(e)}${statusPill(e)}${readHint}<span class="sp"></span>${originTag(e)}</div>
@@ -1048,7 +1052,12 @@ function renderEval(){
     </div>
     <p class="claim">${sentence(e,null,false)}。</p>
     <div class="why"><span class="l">${e.by?"追加した人による根拠":"AIによる根拠"}</span>${esc(e.why)}</div>
-    <p style="margin:0;font-size:13px;color:var(--muted)">この関係は妥当ですか？ <span class="mono">現在 同意 ${e.agree}・不同意 ${e.dis}</span>${v?`　あなたの評価：<b>${v==="agree"?"同意":"違う"}</b>（もう一度押すと取り消し）`:""}</p>
+    <p style="margin:0;font-size:13px;color:var(--muted)">この関係は妥当ですか？ <span class="mono">現在 同意 ${e.agree}・不同意 ${e.dis}</span>　<button type="button" class="booklink" data-hist="${e.id}" style="font-family:inherit;font-weight:400;font-size:13px">ほかの人の評価と根拠を見る</button></p>
+    <div class="evwhy">
+      <label for="evWhy">評価の根拠（「違うと思う」「種類が違う」では必須）<textarea id="evWhy" maxlength="400" placeholder="どこを読んで、なぜそう判断したか">${esc(dr.why)}</textarea></label>
+      <label for="evBasis">どう読んで判断したか<select id="evBasis"><option value="">選んでください</option>${BASIS.map(x=>`<option${x===dr.basis?" selected":""}>${x}</option>`).join("")}</select></label>
+    </div>
+    ${v?`<p style="margin:0;font-size:13px;color:var(--muted)">あなたの評価：<b>${v==="agree"?"同意":"違う"}</b>（同じボタンをもう一度押すと取り消し）</p>`:""}
     <div class="decide">
       <button class="btn primary" data-d="agree" aria-pressed="${v==="agree"}">同意する</button>
       <button class="btn" data-d="disagree" aria-pressed="${v==="disagree"}">違うと思う</button>
@@ -1060,21 +1069,27 @@ function renderEval(){
       <div class="typeboxes">${Object.keys(TYPES).map(t=>`<button type="button" class="tchip fam-${TYPES[t].fam}" data-fix="${t}" aria-pressed="${(fx||e.types).includes(t)}">${t}</button>`).join("")}</div>
       <div style="width:100%"><button class="btn primary small" id="sendFix" type="button">修正案を送る</button></div>
     </div>`;
+  const draft=()=>({why:$("#evWhy").value.trim(),basis:$("#evBasis").value});
+  const need=msg=>{const d=draft();if(d.why.length>=10)return d;toast(msg);$("#evWhy").focus();return null};
+  const done=()=>{S.evDraft=null;S.fixOpen=false;updateCounts();renderEval()};
   card.querySelectorAll("[data-d]").forEach(btn=>btn.onclick=()=>{
     const d=btn.dataset.d;
-    if(d==="fix"){S.fixOpen=!S.fixOpen;renderEval();return}
-    vote(e,d);
+    if(d==="fix"){S.evDraft=draft();S.fixOpen=!S.fixOpen;renderEval();return}
+    let info=draft();
+    if(d==="disagree"&&v!=="disagree"&&!(info=need("違うと思う理由を、10字以上で書いてください。")))return;
+    vote(e,d,info);
     toast(S.myVote[e.id]==="agree"?"同意しました。「わたしの空間」に加わりました。":S.myVote[e.id]==="disagree"?"不同意を記録しました。":"評価を取り消しました。");
-    renderEval();
+    done();
   });
   card.querySelectorAll("[data-fix]").forEach(btn=>btn.onclick=()=>btn.setAttribute("aria-pressed",btn.getAttribute("aria-pressed")!=="true"));
   $("#sendFix").onclick=()=>{
     const ts=[...card.querySelectorAll('[data-fix][aria-pressed="true"]')].map(x=>x.dataset.fix);
     if(!ts.length){toast("種類を1つ以上選んでください。");return}
     if([...ts].sort().join()===[...e.types].sort().join()){toast("今の種類と同じです。違う組み合わせを選んでください。");return}
-    S.fixes[e.id]=ts;S.log.push({eid:e.id,act:"fix",types:ts,ts:Date.now()});S.fixOpen=false;
+    const info=need("修正する理由を、10字以上で書いてください。");if(!info)return;
+    S.fixes[e.id]=ts;S.log.push({eid:e.id,act:"fix",types:ts,ts:Date.now(),...info});
     toast(`「${ts.join("・")}」への修正案を送りました。3人が同意すると反映されます。`);
-    updateCounts();renderEval();
+    done();
   };
 }
 let PICK_A,PICK_B;
@@ -1085,23 +1100,23 @@ function openAdd(a,b){
   (a&&b?$("#addT button"):a?$("#addB"):$("#addA")).focus();
 }
 /* 書名・著者・分野で絞り込める本の選択欄。note(id) は候補の右側に添える注記 */
-function bookPicker(root,note){
+function bookPicker(root,{note,order,onPick}={}){
   const q=root.querySelector("input"),box=root.querySelector(".sugg");let val="",idx=0,res=[];
   const label=id=>id?`${disp(B[id])}　${B[id].author}`:"";
   function draw(){
-    const v=q.value.trim(),all=!v||v===label(val);
-    res=all?BOOKS:BOOKS.filter(b=>(b.title+b.author+b.field+CLASS_NAME[b.cls]).includes(v));
+    const v=q.value.trim(),all=!v||v===label(val),list=order?order():BOOKS;
+    res=all?list:list.filter(b=>(b.title+b.author+b.field+CLASS_NAME[b.cls]).includes(v));
     if(!res.length){box.innerHTML=`<div style="padding:8px 12px;color:var(--muted);font-size:12.5px">「${esc(v)}」に一致する本はありません。</div>`;box.hidden=false;return}
     idx=Math.min(idx,res.length-1);
-    box.innerHTML=res.map((b,i)=>{const n=note?note(b.id):"";
-      return `<button type="button" class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${esc(b.author)}・${esc(b.field)}</span>${n?`<span class="dup">${esc(n)}</span>`:""}</button>`}).join("");
+    box.innerHTML=res.map((b,i)=>{const n=note?note(b.id):null;
+      return `<button type="button" class="${i===idx?"on":""}" data-i="${i}"><span class="t">${esc(disp(b))}</span><span class="a">${esc(b.author)}・${esc(b.field)}</span>${n?`<span class="nt ${n.cls||""}">${esc(n.t)}</span>`:""}</button>`}).join("");
     box.hidden=false;
     box.querySelector(".on")?.scrollIntoView({block:"nearest"});
   }
-  function pick(id){val=id;q.value=label(id);box.hidden=true}
+  function pick(id){const ch=id!==val;val=id;q.value=label(id);box.hidden=true;if(ch&&onPick)onPick(id)}
   q.addEventListener("focus",()=>{q.select();idx=0;draw()});
   q.addEventListener("input",()=>{idx=0;draw()});
-  q.addEventListener("blur",()=>{box.hidden=true;if(!q.value.trim())val="";q.value=label(val)});
+  q.addEventListener("blur",()=>{box.hidden=true;if(!q.value.trim()&&val)pick("");else q.value=label(val)});
   q.addEventListener("keydown",e=>{
     if(e.key==="ArrowDown"){idx=Math.min(idx+1,res.length-1);draw();e.preventDefault()}
     else if(e.key==="ArrowUp"){idx=Math.max(idx-1,0);draw();e.preventDefault()}
@@ -1112,9 +1127,11 @@ function bookPicker(root,note){
   box.addEventListener("click",e=>{const b=e.target.closest("button[data-i]");if(b)pick(res[+b.dataset.i].id)});
   return {get value(){return val},set value(id){val=id||"";q.value=label(val)}};
 }
+
 function initAddForm(){
-  PICK_A=bookPicker($("#pickA"),id=>{const b=PICK_B.value,e=b&&b!==id&&findEdge(id,b);return e?`既に関係あり：${typeLabel(e)}`:""});
-  PICK_B=bookPicker($("#pickB"),id=>{const a=PICK_A.value,e=a&&a!==id&&findEdge(a,id);return e?`既に関係あり：${typeLabel(e)}`:""});
+  const dupNote=other=>id=>{const o=other(),e=o&&o!==id&&findEdge(o,id);return e?{t:`既に関係あり：${typeLabel(e)}`,cls:"dup"}:null};
+  PICK_A=bookPicker($("#pickA"),{note:dupNote(()=>PICK_B.value)});
+  PICK_B=bookPicker($("#pickB"),{note:dupNote(()=>PICK_A.value)});
   $("#addT").innerHTML=Object.keys(TYPES).map(t=>`<button type="button" class="tchip fam-${TYPES[t].fam}" data-t="${t}" aria-pressed="false">${t}</button>`).join("");
   $("#addT").onclick=ev=>{const x=ev.target.closest("[data-t]");if(x)x.setAttribute("aria-pressed",x.getAttribute("aria-pressed")!=="true")};
   document.querySelectorAll("dialog.dlg").forEach(d=>d.addEventListener("click",ev=>{if(ev.target===d)d.close()}));
@@ -1143,23 +1160,93 @@ function initAddForm(){
 }
 
 /* ---------- HISTORY ---------- */
-const REVIEWERS=["工学系研究科 D1","文学部 B3","公共政策大学院 M1","総合文化研究科 M2","人文社会系研究科 D1","経済学研究科 M1","教育学部 B4","工学部 B4","法学政治学研究科 M2","新領域創成科学研究科 D2","医学系研究科 M1","農学部 B3"];
-const FIX_SEED={e11:{types:["同じ問い"],n:2},s15:{types:["批判"],n:1}};
+const REVIEWERS=["工学系研究科 D1","文学部 B3","公共政策大学院 M1","総合文化研究科 M2","人文社会系研究科 D1","経済学研究科 M1","教育学部 B4","工学部 B4","法学政治学研究科 M2","新領域創成科学研究科 D2","医学系研究科 M1","農学部 B3","工学系研究科 M2","文学部 M1","経済学部 B4","情報学環 D3"];
+/* 例示用の評価の根拠。主な関係には個別に、それ以外は関係の種類ごとの文例から割り当てる */
+const REV_SEED={
+ e1:[{v:"agree",basis:"両方を通読",t:"公園の中に高層住宅を並べる構想を、街路から人の目と賑わいを奪うものとしてはっきり退けている。この本の中心的な批判の相手の一つ。"},
+     {v:"agree",basis:"該当する章を確認",t:"コルビュジエの名前は本文に何度も出てくる。『輝く都市』の考え方が戦後の再開発の手本になったことへの批判として読める。"},
+     {v:"dis",basis:"授業・ゼミで講読",t:"直接の標的はコルビュジエ本人より、その考えを取り入れた米国の公営住宅や再開発の担当者。本どうしの関係としては「影響」の側面も書き添えたい。"}],
+ e2:[{v:"agree",basis:"両方を通読",t:"田園都市の考え方が、都市の多様さや密度を嫌う発想の源として扱われている。批判で間違いない。"},
+     {v:"agree",basis:"解説・書評で確認",t:"関係は正しい。ただ、ハワードの評価がやや一面的だという指摘もあるので、根拠文にその点を一言添えてもよい。"}],
+ e3:[{v:"agree",basis:"解説・書評で確認",t:"マンフォードは書評で、ジェイコブズの処方を限られた観察にもとづく素朴なものとして扱っている。批判で合っている。"},
+     {v:"agree",basis:"該当する章を確認",t:"関係の種類には同意。ただ書評は『歴史の都市 明日の都市』とは別の文章なので、根拠の出典は書き分けたほうがよい。"},
+     {v:"dis",basis:"解説・書評で確認",t:"批判が書かれたのは雑誌の書評で、この本ではない。本と本の関係として登録するのは厳密ではないと思う。"}],
+ e7:[{v:"agree",basis:"両方を通読",t:"ゲール自身がジェイコブズから受けた影響を語っている。観察を、歩行者を数える調査に変えたのは発展と言える。"},
+     {v:"agree",basis:"授業・ゼミで講読",t:"歩行者の数や滞在時間を測る手法は、ジェイコブズの観察を引き継いで方法として整えたもの。演習で実際に使った。"}],
+ e10:[{v:"agree",basis:"両方を通読",t:"ジェイコブズを高く評価しつつ、歴史的な街区の保存が住宅の供給を抑えるという点ではっきり異を唱えている。"},
+      {v:"dis",basis:"両方を通読",t:"全体としてはジェイコブズの継承者で、批判は一部分。「批判」だけだと誤解を招くので、「発展」も付けたい。"}],
+ e11:[{v:"agree",basis:"解説・書評で確認",t:"遊歩者と、歩行を修辞として読む発想は近い。研究書でもよく並べて論じられる。"},
+      {v:"dis",basis:"該当する章を確認",t:"ド・セルトーが『パサージュ論』を直接参照している箇所を見つけられなかった。影響と言うのは推測が入りすぎている。"},
+      {v:"dis",basis:"一方のみ読了",t:"同じ問いを共有しているのは確かだが、影響関係を立証するのは難しい。「同じ問い」への修正を支持する。"}],
+ e13:[{v:"agree",basis:"両方を通読",t:"ウェストは都市の活力の説明としてジェイコブズに触れている。観察をスケーリング則として一般化しているので、抽象化でよい。"},
+      {v:"dis",basis:"一方のみ読了",t:"スケーリング則は都市の平均的な傾向で、ジェイコブズが重視した街区ごとの違いは消えてしまう。抽象化と呼べるかは議論の余地がある。"}],
+ s5:[{v:"agree",basis:"両方を通読",t:"五十嵐はジェイコブズの「街路の目」に触れながら、監視カメラに頼る現在の都市を問題にしている。対比として有効。"}],
+ s13:[{v:"agree",basis:"該当する章を確認",t:"フロリダは、弱いつながりを好む人々の存在を挙げてパットナムの前提に異を唱えている。"},
+      {v:"dis",basis:"解説・書評で確認",t:"矛盾とまでは言えない。強い紐帯の衰退と弱い紐帯の選好は、同時に起こりうる。"}],
+ s15:[{v:"agree",basis:"両方を通読",t:"若林は、郊外を一方的に衰退の場として描く議論から距離を取っている。「異なる答え」が合う。"},
+      {v:"dis",basis:"一方のみ読了",t:"三浦の議論への批判の色が強い。「批判」のほうがよいのでは。"}],
+ s20:[{v:"agree",basis:"該当する章を確認",t:"アレグザンダーは論文の中でジェイコブズに触れている。観察と数学的な定式化で補い合う関係。"},
+      {v:"dis",basis:"授業・ゼミで講読",t:"時期と内容から見て、ジェイコブズの観察を形式化した「抽象化」のほうが近い。"}],
+};
+const REV_TPL={
+ "批判":{agree:["{a}は{B}の考え方をはっきり退けている。論の組み立て自体が{B}への反論になっているので「批判」でよい。","根拠文の要約は本文の論旨と合っている。{b}の名前も本文に出てくる。","批判の対象は{B}そのものというより、それを手本にした実践だが、本どうしの関係としては「批判」で問題ない。","ゼミで{A}を読んだとき、{B}への批判が中心の論点として扱われた。"],
+   dis:["退けている部分はあるが、問題設定はかなり引き継いでいる。「発展」や「異なる答え」の面のほうが大きいと思う。","{a}が{B}を直接取り上げている箇所を見つけられなかった。批判と言うには根拠が弱い。","批判しているのは{b}の後に続いた人たちの実践で、{B}という本そのものではないのでは。"]},
+ "発展":{agree:["{b}の議論を前提に、{a}が対象や方法を広げている。引き継いだうえで先へ進めているので「発展」が合う。","{A}の序盤で{B}の枠組みが紹介され、それを土台に議論が組み立てられている。","方法の面での発展がはっきりしている。根拠文の説明どおり。"],
+   dis:["引き継いでいるのは問題意識だけで、結論はかなり違う。「同じ問い」のほうが正確では。","{b}への明示的な参照が少なく、発展と言い切れるか迷う。"]},
+ "具体化":{agree:["{B}の抽象的な議論を、{A}が具体的な事例や手法に落とし込んでいる。","読み比べると、{A}の事例がそのまま{B}の主張の例証になっている。"],
+   dis:["具体化というより、別の事例から独自に同じ結論に至っている。「類似事例」に近い。"]},
+ "抽象化":{agree:["{B}の観察的な記述を、{A}は一般的なモデルとして定式化している。抽象化で合っている。","{a}自身が{b}の議論を出発点に挙げているので、関係ははっきりしている。","異分野どうしだが、扱っている現象は同じ。{A}の側が一般化している。"],
+   dis:["{B}が大事にしていた具体的な観察の多くが落ちている。関係はあるが「抽象化」と呼ぶのは好意的すぎるかもしれない。","{a}が{B}を直接参照しているかは確認できなかった。後から見て似ているだけでは。"]},
+ "影響":{agree:["{b}の議論が{a}の発想の出発点になったことは、解説や研究書でもよく指摘されている。","{A}の中で{b}への言及があり、影響関係は明確。","年代と論点の重なりから見て、影響と言ってよいと思う。"],
+   dis:["影響と言うには直接の言及が確認できない。発想が似ているだけかもしれない。","同時代の共通の背景から来ている可能性があり、一方から他方への影響と特定するのは難しい。"]},
+ "同じ問い":{agree:["どちらも同じ問いに取り組んでいて、並べて読むと答え方の違いがよくわかる。","問いの立て方がほぼ同じ。授業で比較する組み合わせとしても使える。","分野は違うが、問いは確かに共有されている。"],
+   dis:["問いは近いが、{A}と{B}では対象のスケールがかなり違う。同じ問いと言うには広すぎる。","共通点はあるものの、それぞれの本の中心的な問いではない。"]},
+ "異なる答え":{agree:["同じ問題に対して、{a}と{b}は逆向きの処方を出している。並べると対比がはっきりする。","根拠文の整理がわかりやすい。「異なる答え」という関係は、この2冊の読み方として有益。","どちらも同じ問題を出発点にしていることは本文から確認できる。"],
+   dis:["答えが違うというより、そもそも問いが少しずれている。「同じ問い」まで言えるか疑問。","{a}は{b}をはっきり批判しているので、「批判」にしたほうがよいのでは。"]},
+ "類似事例":{agree:["扱っている現象がよく似ていて、地域を変えた比較として読める。","事例の選び方と描き方が近い。一緒に読むと理解が深まった。"],
+   dis:["表面上は似ているが、背景の制度や歴史がかなり違う。類似事例とまとめるのは乱暴かもしれない。"]},
+ "矛盾":{agree:["前提がはっきり食い違っている。どちらかを採ると、もう一方の結論が成り立たない。","{a}が{b}の前提に異を唱えている箇所を確認した。"],
+   dis:["矛盾というより強調点の違い。両立する読み方もできる。","対立はあるが、「異なる答え」のほうが穏当では。"]},
+ "補完":{agree:["{A}が扱わない側面を{B}が扱っていて、2冊で一つの全体像になる。","互いに足りないところを補っている。セットで読むのがよいと思う。","根拠文の整理に同意。方法が違うからこそ補い合う関係。"],
+   dis:["補完と言えるほどの接点はなく、たまたま同じテーマを扱っているだけに見える。","{A}は{B}を前提にしているので、「補完」より「発展」が近い。"]},
+};
+const REV_GEN={agree:["根拠文の要約は本文の内容と合っている。","図書館で該当する章を確認した。根拠文のとおり。","2冊を続けて読むと、この関係はすぐに見えてくる。","講義の参考文献リストでも、この2冊は並べて挙げられていた。"],
+  dis:["根拠文が抽象的で、本文のどこにもとづくのかわからない。出典を示してほしい。","関係はあるが、種類の選び方に違和感がある。議論の欄で検討したい。"]};
+const FIX_SEED={
+ e11:[{types:["同じ問い"],basis:"該当する章を確認",t:"直接の参照が確認できないので、影響ではなく「同じ問い」にとどめるのが妥当。"},
+      {types:["同じ問い"],basis:"解説・書評で確認",t:"歩くことを都市の読み方として捉える問いは共有している。関係の種類だけ直したい。"}],
+ e10:[{types:["発展","批判"],basis:"両方を通読",t:"グレイザーはジェイコブズを継承しつつ一部を批判している。「発展」と「批判」の両方が実態に近い。"},
+      {types:["発展","批判"],basis:"一方のみ読了",t:"賛成。都市の密度を評価する点ではジェイコブズの継承者なので、批判だけだと誤解を招く。"}],
+ s15:[{types:["批判"],basis:"一方のみ読了",t:"若林の本は三浦の議論への反論として読める部分が多い。「批判」に変えたい。"}],
+ s20:[{types:["補完","抽象化"],basis:"授業・ゼミで講読",t:"アレグザンダーはジェイコブズの観察を数学的な構造として一般化しているので、「抽象化」も付けたい。"}],
+};
 function historyOf(e){
   const DAY=864e5,now=Date.now(),ev=[];
   if(e.by!=="あなた"){
     // 例示用の履歴：現在の同意・不同意の数に合うように決定的に生成する
     const h=hash(e.id+"/hist"),born=now-(45+h%120)*DAY,span=now-born-2*DAY,disc=DISC[e.id]||[];
-    ev.push(e.by?{ts:born,k:"human",who:e.by,t:"関係と根拠文を追加"}:{ts:born,k:"ai",t:"候補の関係と根拠文を生成"});
+    const fill=t=>t.replaceAll("{A}",disp(B[e.from])).replaceAll("{B}",disp(B[e.to])).replaceAll("{a}",B[e.from].author).replaceAll("{b}",B[e.to].author);
+    ev.push(e.by?{ts:born,k:"human",who:e.by,t:e.why,basis:"両方を通読"}
+      :{ts:born,k:"ai",sys:"候補の関係と根拠文を生成。手がかりにしたのは書誌の引用関係・目次・内容の要約（例示）。"});
     const air=disc.find(d=>d.who==="AIレビュー");
-    ev.push({ts:born+36e5,k:"aireview",t:air?air.t:"根拠文と本文を照合し、出典を確認しました（例示）。"});
+    ev.push({ts:born+36e5,k:"aireview",sys:air?air.t:`根拠文を両書の本文と照合し、対応する記述を${2+h%4}箇所で確認しました。確信度 ${72+h%24}%（例示）。`});
     const nA=e.agree-(S.myVote[e.id]==="agree"?1:0),nD=e.dis-(S.myVote[e.id]==="disagree"?1:0),n=nA+nD;
     const votes=[...Array(n)].map((_,i)=>{const r=hash(e.id+"#"+i);return {ts:born+DAY+span*(i+(r%1000)/1000)/(n+.5),r}});
     const dis=new Set(votes.map((_,i)=>i).sort((x,y)=>votes[x].r-votes[y].r).slice(0,nD));
-    votes.forEach((v,i)=>ev.push({ts:v.ts,k:dis.has(i)?"dis":"agree",who:REVIEWERS[v.r%REVIEWERS.length]}));
-    const fs=FIX_SEED[e.id];
-    if(fs)for(let i=0;i<fs.n;i++)ev.push({ts:born+span*(.5+.12*i),k:"fix",who:REVIEWERS[(h>>>(i+3))%REVIEWERS.length],t:`種類を「${fs.types.join("・")}」に直す案`});
-    disc.filter(d=>d.who!=="AIレビュー").forEach((d,i)=>ev.push({ts:born+span*(.7+.1*i),k:"discuss",who:d.who,t:d.t}));
+    // 根拠の割り当て：個別の例 → 種類ごとの文例 → 共通の文例。同意の一部は根拠なし
+    const pool={agree:[],dis:[]};
+    (REV_SEED[e.id]||[]).forEach(x=>pool[x.v].push({t:x.t,basis:x.basis}));
+    ["agree","dis"].forEach(v=>{
+      const tpl=[...(REV_TPL[e.type]?.[v]||[]),...REV_GEN[v]],off=h%tpl.length;
+      tpl.forEach((_,i)=>pool[v].push({t:fill(tpl[(i+off)%tpl.length])}));
+    });
+    votes.forEach((x,i)=>{
+      const v=dis.has(i)?"dis":"agree",skip=v==="agree"&&!(REV_SEED[e.id]||[]).length&&x.r%3===0;
+      const rv=skip?null:pool[v].shift();
+      ev.push({ts:x.ts,k:v,who:REVIEWERS[x.r%REVIEWERS.length],t:rv?.t||"",basis:rv?.basis||BASIS[(x.r>>>4)%BASIS.length]});
+    });
+    (FIX_SEED[e.id]||[]).forEach((f,i)=>ev.push({ts:born+span*(.5+.12*i),k:"fix",who:REVIEWERS[(h>>>(i+3))%REVIEWERS.length],types:f.types,t:f.t,basis:f.basis}));
+    disc.filter(d=>d.who!=="AIレビュー").forEach((d,i)=>ev.push({ts:born+span*(.72+.1*i),k:"discuss",who:d.who,t:d.t}));
   }
   S.log.filter(l=>l.eid===e.id).forEach(l=>ev.push({ts:l.ts,k:"me",who:"あなた",l}));
   ev.sort((x,y)=>x.ts-y.ts);
@@ -1171,25 +1258,28 @@ function historyOf(e){
       if(act==="add")a++;
       else if(act!=="fix"){if(prev==="agree")a--;if(prev==="disagree")d--;if(act==="agree")a++;if(act==="disagree")d++}}
     const ns=statusOf(a,d);
-    if(ns!==st&&(a+d)>0){out.push({ts:x.ts,k:"status",t:`「${ns}」になりました（同意 ${a}・不同意 ${d}）`});st=ns}
+    if(ns!==st&&(a+d)>0){out.push({ts:x.ts,k:"status",sys:`「${ns}」になりました（同意 ${a}・不同意 ${d}）`});st=ns}
   }
   return out;
 }
 function histItem(x){
   const K={ai:["AI生成","ai"],human:["人間が追加","hu"],aireview:["AIレビュー","ai"],agree:["同意","ok"],dis:["不同意","ng"],fix:["修正案",""],discuss:["議論",""],status:["状態","st"]};
-  let lab,cls,t=x.t;
+  let lab,cls,{sys,t,basis,types}=x,isVote=x.k==="agree"||x.k==="dis";
   if(x.k==="me"){
-    const {act,prev,types}=x.l;
-    [lab,cls,t]=act==="add"?["人間が追加","hu","関係と根拠文を追加（追加した人の同意1件として数えます）"]
-      :act==="agree"?["同意","ok",prev?"不同意から変更":""]:act==="disagree"?["不同意","ng",prev?"同意から変更":""]
-      :act==="fix"?["修正案","",`種類を「${types.join("・")}」に直す案`]:["取り消し","",`${prev==="agree"?"同意":"不同意"}を取り消し`];
-    cls+=" me";
+    const l=x.l,act=l.act,was=l.prev==="agree"?"同意":"不同意";
+    [lab,cls]=act==="add"?["人間が追加","hu"]:act==="agree"?["同意","ok"]:act==="disagree"?["不同意","ng"]:act==="fix"?["修正案",""]:["取り消し",""];
+    sys=act==="add"?"関係と根拠文を追加（追加した人の同意1件として数えます）":act==="cancel"?`${was}を取り消し`:(l.prev&&act!=="fix")?`${was}から変更`:"";
+    t=l.why;basis=l.basis;types=l.types;isVote=act==="agree"||act==="disagree";cls+=" me";
   }else [lab,cls]=K[x.k];
-  return `<li class="h-${cls}"><span class="d mono">${fmtDate(x.ts)}</span><span class="k">${lab}</span>${x.who?`<span class="w">${esc(x.who)}</span>`:""}${t?`<p>${esc(t)}</p>`:""}</li>`;
+  return `<li class="h-${cls}"><span class="d mono">${fmtDate(x.ts)}</span><span class="k">${lab}</span>${x.who?`<span class="w">${esc(x.who)}</span>`:""}${basis?`<span class="b">${esc(basis)}</span>`:""}`
+    +(types?`<p>種類を ${types.map(typeChip).join(" ")} に直す案</p>`:"")
+    +(sys?`<p>${esc(sys)}</p>`:"")
+    +(t?`<blockquote>${esc(t)}</blockquote>`:isVote?`<p style="color:var(--faint);font-size:12px">（根拠の記入なし）</p>`:"")
+    +`</li>`;
 }
 function openHist(id){
   const e=EDGES.find(x=>x.id===id);if(!e)return;
-  const hs=historyOf(e),nfix=hs.filter(x=>x.k==="fix"||x.l?.act==="fix").length;
+  const hs=historyOf(e),nfix=hs.filter(x=>x.k==="fix"||x.l?.act==="fix").length,nwhy=hs.filter(x=>x.k==="agree"||x.k==="dis"?x.t:x.l&&/^(agree|disagree)$/.test(x.l.act)&&x.l.why).length;
   $("#histBody").innerHTML=`
     <div class="dlg-hd"><h3 id="histTitle">評価の履歴</h3><button type="button" class="x" aria-label="閉じる" data-close>×</button></div>
     <div class="rel-top">${typeChips(e)}${statusPill(e,true)}<span class="sp"></span>${originTag(e)}</div>
@@ -1199,6 +1289,7 @@ function openHist(id){
       <div><span class="n">${e.agree}</span><span class="l">同意</span></div>
       <div><span class="n">${e.dis}</span><span class="l">不同意</span></div>
       <div><span class="n">${nfix}</span><span class="l">修正案</span></div>
+      <div><span class="n">${nwhy}</span><span class="l">根拠つきの評価</span></div>
     </div>
     <p class="note">確定の条件：同意5件以上かつ同意率80%以上。不同意が同意を上回ると「議論中」になります。</p>
     <ol class="hist">${hs.map(histItem).join("")}</ol>
